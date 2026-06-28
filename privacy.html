@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>سياسة الخصوصية — قارئ الصوت</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" >
+<style>
+:root {
+  --bg: #0a0e1a; --surface: #111827; --surface2: #1a2235;
+  --border: rgba(100,140,255,0.12); --accent: #4f8ef7; --accent2: #7eb3ff;
+  --glow: rgba(79,142,247,0.22); --text: #e8edf8; --text2: #8a9bbf; --text3: #5a6a8a;
+  --success: #48bb78;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Tajawal', sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+
+/* topbar */
+.topbar { height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; background: rgba(10,14,26,0.97); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50; }
+
+/* .logo-name { font-size: 1.1rem; font-weight: 700; color: #1242d3; } */
+.back-btn { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1px solid var(--border); border-radius: 9px; color: var(--accent2); text-decoration: none; font-size: 0.85rem; font-weight: 700; transition: all 0.2s; }
+.back-btn:hover { background: rgba(79,142,247,0.08); }
+
+
+
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.logo svg {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+}
+
+.logo-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  /* color: #1242d3; */
+  color:#1877F2;
+}
+
+
+
+/* content */
+.page { flex: 1; max-width: 780px; margin: 0 auto; padding: 48px 24px 80px; width: 100%; }
+.page-badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; background: rgba(79,142,247,0.1); border: 1px solid rgba(79,142,247,0.22); border-radius: 50px; font-size: 0.82rem; color: var(--accent2); font-weight: 700; margin-bottom: 20px; }
+.page h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 900; margin-bottom: 12px; background: linear-gradient(135deg, var(--text), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.page .intro { color: var(--text2); font-size: 1rem; line-height: 1.8; margin-bottom: 40px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+
+.section { margin-bottom: 28px; }
+.section-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px 22px; }
+.section-card:hover { border-color: rgba(100,140,255,0.22); }
+.section-num { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; background: rgba(79,142,247,0.12); color: var(--accent2); font-size: 0.82rem; font-weight: 700; margin-bottom: 10px; }
+.section-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 10px; }
+.section-body { color: var(--text2); font-size: 0.92rem; line-height: 1.9; }
+.section-body ul { padding-right: 18px; margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.section-body li::marker { color: var(--accent2); }
+
+.highlight-box { background: rgba(72,187,120,0.07); border: 1px solid rgba(72,187,120,0.2); border-radius: 10px; padding: 12px 16px; margin-top: 10px; color: #68d391; font-size: 0.88rem; line-height: 1.8; }
+
+/* واتساب */
+.wa-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 36px; }
+.wa-card-info h3 { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+.wa-card-info p { color: var(--text2); font-size: 0.88rem; }
+.wa-btn { display: flex; align-items: center; gap: 8px; padding: 11px 22px; background: rgba(37,211,102,0.1); border: 1px solid rgba(37,211,102,0.28); border-radius: 10px; color: #25d366; font-size: 0.9rem; font-weight: 700; text-decoration: none; transition: all 0.2s; white-space: nowrap; }
+.wa-btn:hover { background: rgba(37,211,102,0.18); }
+.wa-btn svg { width: 20px; height: 20px; fill: #25d366; flex-shrink: 0; }
+
+/* footer */
+/* FOOTER */
+.footer {
+  direction: rtl;
+  font-family: 'Tajawal', sans-serif;
+  background: #0a0e1a;
+  border-top: 1px solid rgba(100,140,255,0.1);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+}
+
+.footer-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.footer-copy {
+  color: #5a6a8a;
+  font-size: 0.78rem;
+  letter-spacing: 0.3px;
+}
+
+.footer-wa {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #25d366;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none;
+  opacity: 0.88;
+  transition: all 0.2s ease;
+}
+
+.footer-wa:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+/* MOBILE */
+@media (max-width: 800px) {
+
+  .footer {
+    padding: 12px;
+  }
+
+  .footer-content {
+    gap: 12px;
+  }
+
+}
+
+
+@media (max-width: 600px) { .page { padding: 32px 16px 60px; } .wa-card { flex-direction: column; align-items: flex-start; } }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="logo" href="/">
+
+    <svg width="500" height="500" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+
+      <defs>
+        <linearGradient id="bg" x1="10%" y1="0%" x2="90%" y2="100%">
+          <stop offset="0%" stop-color="#1a90ff"/>
+          <stop offset="100%" stop-color="#0050d0"/>
+        </linearGradient>
+        <filter id="sh" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="#0030a0" flood-opacity="0.35"/>
+        </filter>
+      </defs>
+      
+      <!-- شكل ميسنجر كامل مع ذيل ناعم -->
+      <path d="
+        M250 28
+        C372 28, 472 118, 472 226
+        C472 334, 372 424, 250 424
+        C228 424, 208 420, 190 414
+        C172 432, 152 448, 136 460
+        C122 470, 110 474, 104 470
+        C98 466, 98 458, 102 448
+        C108 432, 112 414, 110 396
+        C108 388, 104 380, 100 372
+        C68 338, 28 286, 28 226
+        C28 118, 128 28, 250 28 Z
+      " fill="#1877F2" filter="url(#sh)"/>
+      
+      <!-- موجة صوتية بيضاء -->
+      <rect x="120" y="204" width="20" height="44" rx="10" fill="white" opacity="0.48"/>
+      <rect x="144" y="183" width="20" height="86" rx="10" fill="white" opacity="0.62"/>
+      <rect x="170" y="158" width="22" height="136" rx="11" fill="white" opacity="0.76"/>
+      <rect x="196" y="137" width="22" height="178" rx="11" fill="white" opacity="0.87"/>
+      <rect x="224" y="120" width="24" height="212" rx="12" fill="white" opacity="0.96"/>
+      <rect x="252" y="120" width="24" height="212" rx="12" fill="white" opacity="1.0"/>
+      <rect x="280" y="137" width="22" height="178" rx="11" fill="white" opacity="0.87"/>
+      <rect x="306" y="158" width="22" height="136" rx="11" fill="white" opacity="0.76"/>
+      <rect x="332" y="183" width="20" height="86" rx="10" fill="white" opacity="0.62"/>
+      <rect x="356" y="204" width="20" height="44" rx="10" fill="white" opacity="0.48"/>
+      </svg>
+
+      <span class="logo-name">LIKETWIN</span>
+
+    
+
+  </a>
+  <a class="back-btn" href="/"><i class="fa-solid fa-arrow-left"></i> العودة</a>
+</header>
+
+<main class="page">
+  <div class="page-badge"><i class="fa-solid fa-shield-halved"></i> الخصوصية والأمان</div>
+  <h1>سياسة الخصوصية</h1>
+  <p class="intro">مرحبًا بك في <strong>ليكيتوين</strong>. نحن نلتزم بحماية خصوصية المستخدمين وتوضيح كيفية التعامل مع البيانات، خصوصًا أن خدمتنا تعتمد على تحليل الصوت باستخدام الذكاء الاصطناعي.</p>
+
+  <div class="section">
+    <div class="section-card">
+      <div class="section-num">1</div>
+      <div class="section-title">طبيعة الخدمة</div>
+      <div class="section-body">
+        يوفر موقعنا خدمة تحليل صوتي متقدم، حيث يمكن للمستخدم رفع مقاطع صوتية (ويُفضل أن تكون قراءة للقرآن الكريم) بهدف مقارنة الخصائص الصوتية مع قاعدة بيانات تحتوي على أصوات قرّاء معروفين — أكثر من <strong>500 قارئ</strong>.
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-card">
+      <div class="section-num">2</div>
+      <div class="section-title">إرشادات الاستخدام</div>
+      <div class="section-body">
+        <ul>
+          <li>يُفضل رفع مقطع صوتي مدته حوالي <strong>20 ثانية</strong> للحصول على أفضل نتائج.</li>
+          <li>الحد الأقصى لمدة المقطع هو <strong>دقيقة واحدة</strong>.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-card">
+      <div class="section-num">3</div>
+      <div class="section-title">نوع التحليل</div>
+      <div class="section-body">نقوم بتحليل الخصائص الفيزيولوجية والفيزيائية للصوت (هوية الصوت)، وليس فقط الإيقاع.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-card">
+      <div class="section-num">4</div>
+      <div class="section-title">التعامل مع الملفات الصوتية</div>
+      <div class="section-body">
+        <div class="highlight-box">
+          ✅ لا يتم الاحتفاظ بالملفات الصوتية بعد المعالجة<br>
+          ✅ لا يتم استخدام صوتك في تدريب أي نموذج ذكاء اصطناعي<br>
+          ✅ يتم استخدام صوتك فقط لغرض التحليل اللحظي وإظهار النتائج
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-card">
+      <div class="section-num">5</div>
+      <div class="section-title">التعديلات</div>
+      <div class="section-body">قد نقوم بتحديث سياسة الخصوصية في أي وقت، ويُعتبر استمرارك في استخدام الموقع موافقةً على التعديلات.</div>
+    </div>
+  </div>
+
+  <!-- بطاقة التواصل -->
+  <div class="wa-card">
+    <div class="wa-card-info">
+      <h3>لأي استفسار تواصل معنا</h3>
+      <p>نرد عليك في أقرب وقت ممكن عبر واتساب</p>
+    </div>
+    <a class="wa-btn" href="https://wa.me/212603074384" target="_blank">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.134.559 4.133 1.535 5.866L.057 23.272a.5.5 0 0 0 .671.637l5.596-1.795A11.938 11.938 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.8 9.8 0 0 1-4.98-1.356l-.357-.212-3.7 1.187 1.163-3.596-.232-.369A9.793 9.793 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/></svg>
+      تواصل عبر واتساب
+    </a>
+  </div>
+</main>
+
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-content">
+  <span class="footer-copy"><i class="fa-solid fa-copyright"></i> 2026 LIKETWIN</span>
+    <a href="https://wa.me/212603074384" target="_blank" class="footer-wa">
+
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="#25d366">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+        <path d="M12 0C5.373 0 0 5.373 0 12c0 2.134.559 4.133 1.535 5.866L.057 23.272a.5.5 0 0 0 .671.637l5.596-1.795A11.938 11.938 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.8 9.8 0 0 1-4.98-1.356l-.357-.212-3.7 1.187 1.163-3.596-.232-.369A9.793 9.793 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/>
+      </svg>
+
+      تواصل
+    </a>
+
+  </div>
+</footer>
+</body>
+</html>
