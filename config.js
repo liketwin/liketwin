@@ -1,1 +1,3 @@
-const API = "https://api.liketwin.com";
+const CONFIG = {
+    API: "https://api.liketwin.com"
+};
