@@ -422,16 +422,24 @@ body::before {
 
 </div>
 
+<script src="config.js"></script>
+
 <script>
   // ✅ فحص الجلسة عبر الـ Cookie (httpOnly) بسؤال السيرفر
   (async () => {
     try {
-      const res = await fetch('/get_user_info', { credentials: 'include' });
+      const res = await fetch(`${API}/get_user_info`, {
+        credentials: 'include'
+      });
+
       const data = await res.json();
+
       if (data.status === 'ok' && data.user) {
         window.location.href = '/';
       }
-    } catch (e) { /* لا جلسة — نبقى في صفحة الدخول */ }
+    } catch (e) {
+      // لا توجد جلسة — نبقى في صفحة الدخول
+    }
   })();
 </script>
 </body>
