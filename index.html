@@ -367,10 +367,10 @@ body::before {
     <div class="auth-buttons">
 
       <!--
-        زر Google — غيّر href إلى مسار OAuth في خادمك
-        مثال FastAPI + authlib: href="/auth/google"
+        زر Google — الآن يوجّه لدومين الـ API مباشرة (api.liketwin.com)
+        لأن authlib هناك كيدير redirect لـ Google ثم يرجّع الكوكي
       -->
-      <a class="btn-google" href="/auth/google">
+      <a class="btn-google" href="#" id="btnGoogleLogin">
         <svg class="g-logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
           <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -388,10 +388,9 @@ body::before {
       </div>
 
       <!--
-        زر Facebook — غيّر href إلى مسار OAuth في خادمك
-        مثال FastAPI + authlib: href="/auth/facebook"
+        زر Facebook — نفس المنطق: يوجّه لدومين الـ API
       -->
-      <a class="btn-facebook" href="/auth/facebook">
+      <a class="btn-facebook" href="#" id="btnFacebookLogin">
         <svg class="fb-logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="#ffffff">
           <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.235 2.686.235v2.97h-1.514c-1.491 0-1.956.93-1.956 1.886v2.254h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/>
         </svg>
@@ -422,11 +421,17 @@ body::before {
 
 </div>
 
+<script src="config.js"></script>
 <script>
+  // ✅ تعديل: بناء روابط OAuth ديناميكياً نحو دومين الـ API بدل الكتابة المباشرة فـ href
+  // (تفادينا وضعها كـ href ثابت باش نضمن أن CONFIG.API محمّل قبل الاستخدام)
+  document.getElementById('btnGoogleLogin').href = `${CONFIG.API}/auth/google`;
+  document.getElementById('btnFacebookLogin').href = `${CONFIG.API}/auth/facebook`;
+
   // ✅ فحص الجلسة عبر الـ Cookie (httpOnly) بسؤال السيرفر
   (async () => {
     try {
-      const res = await fetch('/get_user_info', { credentials: 'include' });
+      const res = await fetch(`${CONFIG.API}/get_user_info`, { credentials: 'include' });
       const data = await res.json();
       if (data.status === 'ok' && data.user) {
         window.location.href = '/';
