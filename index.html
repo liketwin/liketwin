@@ -428,16 +428,24 @@ body::before {
   document.getElementById('btnGoogleLogin').href = `${CONFIG.API}/auth/google`;
   document.getElementById('btnFacebookLogin').href = `${CONFIG.API}/auth/facebook`;
 
-  // ✅ فحص الجلسة عبر الـ Cookie (httpOnly) بسؤال السيرفر
-  // (async () => {
-  //   try {
-  //     const res = await fetch(`${CONFIG.API}/get_user_info`, { credentials: 'include' });
-  //     const data = await res.json();
-  //     if (data.status === 'ok' && data.user) {
-  //       window.location.href = '/';
-  //     }
-  //   } catch (e) { /* لا جلسة — نبقى في صفحة الدخول */ }
-  // })();
+  (async () => {
+  try {
+    const res = await fetch(`${CONFIG.API}/get_user_info`, {
+      credentials: 'include'
+    });
+
+    if (!res.ok) return; // إذا لم يكن مسجل دخول لا نفعل شيئًا
+
+    const data = await res.json();
+
+    if (data.status === 'ok' && data.user) {
+      // لا تعد تحميل نفس الصفحة
+      window.location.replace('/M7.html');
+    }
+  } catch (e) {
+    // المستخدم غير مسجل دخول، يبقى في صفحة تسجيل الدخول
+  }
+})();
 </script>
 </body>
 </html>
