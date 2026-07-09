@@ -429,15 +429,15 @@ body::before {
   document.getElementById('btnFacebookLogin').href = `${CONFIG.API}/auth/facebook`;
 
   // ✅ فحص الجلسة عبر الـ Cookie (httpOnly) بسؤال السيرفر
-  (async () => {
-    try {
-      const res = await fetch(`${CONFIG.API}/get_user_info`, { credentials: 'include' });
-      const data = await res.json();
-      if (data.status === 'ok' && data.user) {
-        window.location.href = '/';
-      }
-    } catch (e) { /* لا جلسة — نبقى في صفحة الدخول */ }
-  })();
+  // (async () => {
+  //   try {
+  //     const res = await fetch(`${CONFIG.API}/get_user_info`, { credentials: 'include' });
+  //     const data = await res.json();
+  //     if (data.status === 'ok' && data.user) {
+  //       window.location.href = '/';
+  //     }
+  //   } catch (e) { /* لا جلسة — نبقى في صفحة الدخول */ }
+  // })();
 </script>
 </body>
 </html>
