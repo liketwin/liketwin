@@ -380,7 +380,6 @@ body::before {
         </filter>
       </defs>
       
-      <!-- شكل ميسنجر كامل مع ذيل ناعم -->
       <path d="
         M250 28
         C372 28, 472 118, 472 226
@@ -395,7 +394,6 @@ body::before {
         C28 118, 128 28, 250 28 Z
       " fill="#1877F2" filter="url(#sh)"/>
       
-      <!-- موجة صوتية بيضاء -->
       <rect x="120" y="204" width="20" height="44" rx="10" fill="white" opacity="0.48"/>
       <rect x="144" y="183" width="20" height="86" rx="10" fill="white" opacity="0.62"/>
       <rect x="170" y="158" width="22" height="136" rx="11" fill="white" opacity="0.76"/>
@@ -434,7 +432,7 @@ body::before {
     <div class="auth-btns-group">
 
       <!-- Google -->
-      <a class="btn-login-big" href="/auth/google">
+      <a class="btn-login-big" href="#" id="btnGoogleLogin">
         <svg class="g-logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
           <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -451,7 +449,7 @@ body::before {
       </div>
 
       <!-- Facebook -->
-      <a class="btn-login-fb" href="/auth/facebook">
+      <a class="btn-login-fb" href="#" id="btnFacebookLogin">
         <svg class="fb-logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="#ffffff">
           <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.235 2.686.235v2.97h-1.514c-1.491 0-1.956.93-1.956 1.886v2.254h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/>
         </svg>
@@ -477,19 +475,6 @@ body::before {
 
     <!-- Alert Banner -->
     <div id="alertBanner" style="display:none;"></div>
-
-    <!-- No Plan State -->
-    <!-- <div class="no-plan-card" id="noPlanCard" style="display:none;">
-      <div class="no-plan-icon">📦</div>
-      <h3>لا توجد خطة نشطة</h3>
-      <p>لم تشترك بعد في أي خطة. اختر خطتك واستمتع بخدمة مطابقة الصوت.</p>
-      <a class="btn-subscribe-now" href="/pricing">
-        <span>✨</span>
-        اشترك الآن
-      </a>
-    </div> -->
-
-
 
     <!-- No Plan State -->
 <div class="no-plan-card" id="noPlanCard" style="display:none;">
@@ -533,7 +518,6 @@ body::before {
         </div>
         <div class="stat-card">
           <div class="stat-icon gold-bg">
-            <!-- ⭐ -->
             <i class="fa-solid fa-layer-group"></i>
 
           </div>
@@ -635,6 +619,7 @@ body::before {
   </div>
 </footer>
 
+<script src="config.js"></script>
 <script>
 const PLAN_DISPLAY = {
   starter:  { label: 'المبتدئ',   price: 1,  comparisons: 5,   cls: 'starter' },
@@ -642,12 +627,16 @@ const PLAN_DISPLAY = {
   advanced: { label: 'المتقدم',   price: 10, comparisons: 130, cls: 'advanced' },
 };
 
+// ✅ روابط OAuth تُبنى ديناميكياً نحو دومين الـ API
+document.getElementById('btnGoogleLogin').href   = `${CONFIG.API}/auth/google`;
+document.getElementById('btnFacebookLogin').href = `${CONFIG.API}/auth/facebook`;
+
 // ✅ بيانات المستخدم تُجلب من السيرفر عبر Cookie — لا قراءة للتوكن في JS
 let _currentUser = null;
 
 async function loadCurrentUser() {
   try {
-    const res = await fetch('/get_user_info', { credentials: 'include' });
+    const res = await fetch(`${CONFIG.API}/get_user_info`, { credentials: 'include' });
     if (!res.ok) return;
     const data = await res.json();
     if (data.status === 'ok' && data.user) {
@@ -680,7 +669,7 @@ function hide(id) {
 }
 
 async function fetchUserInfo() {
-  const res = await fetch('/get_user_info', {
+  const res = await fetch(`${CONFIG.API}/get_user_info`, {
     credentials: 'include'
   });
   if (!res.ok) throw new Error('فشل جلب البيانات');
@@ -692,7 +681,6 @@ function renderDashboard(email, name, userData) {
   show('dashboard');
 
   const displayName = name ? name.split(' ')[0] : email.split('@')[0];
-  // document.getElementById('welcomeTitle').textContent = `مرحباً، ${displayName} 👋`;
 
   const titleEl = document.getElementById('welcomeTitle');
   titleEl.textContent = '';
@@ -737,7 +725,6 @@ function renderDashboard(email, name, userData) {
   if (remaining <= 0) {
     alertEl.style.display = 'flex';
     alertEl.className = 'alert-banner no-credits';
-    // ✅ DOM construction — لا innerHTML مع بيانات ديناميكية
     const icon = document.createElement('span'); icon.textContent = '⚠️';
     const txt  = document.createTextNode(' نفدت جميع محاولاتك. ');
     const link = document.createElement('a');
@@ -748,7 +735,6 @@ function renderDashboard(email, name, userData) {
     alertEl.style.display = 'flex';
     alertEl.className = 'alert-banner low-credits';
     const safeRemaining = parseInt(remaining) || 0;
-    // ✅ DOM construction — لا innerHTML مع بيانات ديناميكية
     const icon   = document.createElement('span'); icon.textContent = '🔔';
     const pre    = document.createTextNode(' تبقّى لك ');
     const strong = document.createElement('strong'); strong.textContent = safeRemaining;
@@ -791,7 +777,6 @@ function renderDashboard(email, name, userData) {
 }
 
 async function initDashboard() {
-  // ✅ جلب بيانات المستخدم من السيرفر أولاً
   await loadCurrentUser();
 
   const email = getUserEmail();
@@ -803,7 +788,6 @@ async function initDashboard() {
 
   const name = getUserName();
   try {
-    // _currentUser يحتوي بالفعل على plan/remaining من /get_user_info
     renderDashboard(email, name, _currentUser);
   } catch (err) {
     renderDashboard(email, name, null);
@@ -812,7 +796,7 @@ async function initDashboard() {
 
 async function handleLogout() {
   // ✅ حذف Cookie من السيرفر
-  await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+  await fetch(`${CONFIG.API}/auth/logout`, { method: 'POST', credentials: 'include' });
   window.location.href = '/';
 }
 
