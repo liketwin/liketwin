@@ -756,7 +756,6 @@ td:last-child{padding-left:22px;}
 
 <div class="toast" id="toast"></div>
 
-<script src="config.js"></script>
 <script>
 /* ═══════════ CONFIG ═══════════ */
 // ✅ كلمة المرور لا تُخزن في الكود — تُرسل للسيرفر للتحقق
@@ -781,7 +780,7 @@ async function doLogin() {
   if (!pwd) return;
   // ✅ التحقق عبر السيرفر — كلمة المرور لا تُقارن في JS
   try {
-    const res = await fetch(`${CONFIG.API}/admin_orders`, {
+    const res = await fetch('/admin_orders', {
       headers: { 'X-Admin-Token': pwd }
     });
     if (res.status === 403) {
@@ -824,7 +823,7 @@ async function loadOrders() {
   document.getElementById('ordersTableBody').innerHTML =
     '<tr class="loading-row"><td colspan="8"><div class="spinner" style="margin:0 auto"></div></td></tr>';
   try {
-    const res = await fetch(`${CONFIG.API}/admin_orders`, {headers:{'X-Admin-Token':ADMIN_TOKEN_SESSION}});
+    const res = await fetch('/admin_orders', {headers:{'X-Admin-Token':ADMIN_TOKEN_SESSION}});
     if (res.status === 403) { showToast('⛔ غير مصرح', true); return; }
     const data = await res.json();
     allOrders = data.orders || [];
@@ -905,7 +904,7 @@ async function loadUsers() {
   document.getElementById('usersTableBody').innerHTML =
     '<tr class="loading-row"><td colspan="7"><div class="spinner" style="margin:0 auto"></div></td></tr>';
   try {
-    const res = await fetch(`${CONFIG.API}/admin_users`, {headers:{'X-Admin-Token':ADMIN_TOKEN_SESSION}});
+    const res = await fetch('/admin_users', {headers:{'X-Admin-Token':ADMIN_TOKEN_SESSION}});
     if (res.status === 403) { showToast('⛔ غير مصرح', true); return; }
     const data = await res.json();
     allUsers = data.users || [];
@@ -921,10 +920,15 @@ function updateUserStats() {
   const total = allUsers.filter(u => u.plan).length;
   const totalRemaining = allUsers.reduce((s,u)=>s+(u.remaining||0),0);
   const empty = allUsers.filter(u=>u.plan && u.remaining===0).length;
+  // used = sum of (plan_comparisons - remaining)
   let totalUsed = 0;
   allUsers.forEach(u => {
     const ttl = u.total || 0;
-    totalUsed += Math.max(0, ttl - (u.remaining || 0));
+totalUsed += Math.max(0, ttl - (u.remaining || 0));
+
+    // const pd = PLAN_DATA[u.plan];
+    // if (pd) totalUsed += Math.max(0, pd.comparisons - (u.remaining||0))
+    ;
   });
   document.getElementById('uStatTotal').textContent = total;
   document.getElementById('uStatRemaining').textContent = totalRemaining;
@@ -942,6 +946,9 @@ function applyUserFilters() {
     if (p === 'none' && u.plan) return false;
     if (p && p !== 'none' && u.plan !== p) return false;
     if (cr) {
+      // const pd = PLAN_DATA[u.plan];
+      // const total = pd ? pd.comparisons : 0;
+      // const pct = total > 0 ? (u.remaining / total) * 100 : 0;
       const total = u.total || 0;
       const pct = total > 0 ? (u.remaining / total) * 100 : 0;
       if (cr === 'empty'  && u.remaining !== 0) return false;
@@ -967,9 +974,12 @@ function renderUsersTable() {
   } else {
     tbody.innerHTML = slice.map(u => {
       const pd     = PLAN_DATA[u.plan];
+      // const ttl    = pd ? pd.comparisons : 0;
       const ttl = u.total || 0;
+      // const used   = pd ? Math.max(0, ttl - (u.remaining||0)) : 0;
       const used = Math.max(0, (u.total || 0) - (u.remaining || 0));
       const rem    = u.remaining || 0;
+      // const pct    = ttl > 0 ? Math.round((rem/ttl)*100) : 0;
       const pct = ttl > 0 ? Math.round((rem / ttl) * 100) : 0;
       const barCls = rem===0?'empty':pct<20?'low':'';
       const numCls = rem===0?'empty':pct<20?'low':'good';
@@ -1002,6 +1012,8 @@ function renderUsersTable() {
 ═══════════════════════════════════ */
 function openUserModal(u) {
   currentEditUser = u;
+  // const pd    = PLAN_DATA[u.plan];
+  // const ttl   = pd ? pd.comparisons : 0;
   const ttl = u.total || 0;
   const rem   = u.remaining || 0;
   const used  = Math.max(0, ttl - rem);
@@ -1019,6 +1031,7 @@ function openUserModal(u) {
   document.getElementById('uMiniPctLabel').textContent = pct + '% مستهلك';
   document.getElementById('uMiniRemLabel').textContent  = rem + ' متبقٍ';
 
+  // Set current values in form
   document.getElementById('uEditPlan').value    = u.plan || '';
   document.getElementById('uEditCredits').value = rem;
   document.getElementById('uCurrentCreditsHint').textContent = rem;
@@ -1044,15 +1057,16 @@ async function saveUserPlan() {
   const pd = PLAN_DATA[newPlan];
 
   try {
-    const res = await fetch(`${CONFIG.API}/admin_update_user`, {
+    const res = await fetch('/admin_update_user', {
       method: 'POST',
       headers: {'Content-Type':'application/json','X-Admin-Token':ADMIN_TOKEN_SESSION},
+      // body: JSON.stringify({email: currentEditUser.email, plan: newPlan, remaining: pd.comparisons})
       body: JSON.stringify({
-        email: currentEditUser.email,
-        plan: newPlan,
-        remaining: pd.comparisons,
-        total: pd.comparisons
-      })
+  email: currentEditUser.email,
+  plan: newPlan,
+  remaining: pd.comparisons,
+  total: pd.comparisons
+})
     });
     const data = await res.json();
     if (data.status !== 'ok') throw new Error(data.message);
@@ -1060,10 +1074,12 @@ async function saveUserPlan() {
     // local fallback
   }
 
+  // Update local state
   const u = allUsers.find(x => x.email === currentEditUser.email);
   if (u) {u.plan = newPlan;
 u.remaining = pd.comparisons;
 u.total = pd.comparisons;}
+  // u.plan = newPlan; u.remaining = pd.comparisons; 
   if (!u) allUsers.push({email: currentEditUser.email, plan: newPlan, remaining: pd.comparisons});
   currentEditUser.plan = newPlan;
   currentEditUser.remaining = pd.comparisons;
@@ -1080,7 +1096,7 @@ async function saveUserCredits() {
   if (isNaN(newCredits) || newCredits < 0) { showToast('⚠️ أدخل رقمًا صحيحًا', true); return; }
 
   try {
-    const res = await fetch(`${CONFIG.API}/admin_update_user`, {
+    const res = await fetch('/admin_update_user', {
       method: 'POST',
       headers: {'Content-Type':'application/json','X-Admin-Token':ADMIN_TOKEN_SESSION},
       body: JSON.stringify({email: currentEditUser.email, plan: currentEditUser.plan, remaining: newCredits})
@@ -1108,13 +1124,14 @@ async function resetUser() {
 
 async function resetUserByEmail(email) {
   try {
-    await fetch(`${CONFIG.API}/admin_reset_user`, {
+    await fetch('/admin_reset_user', {
       method: 'POST',
       headers: {'Content-Type':'application/json','X-Admin-Token':ADMIN_TOKEN_SESSION},
       body: JSON.stringify({email})
     });
   } catch {}
   const u = allUsers.find(x => x.email === email);
+  // if (u) { u.plan = null; u.remaining = 0; }
   if (u) { 
   u.plan = null; 
   u.remaining = 0; 
@@ -1130,15 +1147,16 @@ async function quickAddCredits(email, amount) {
   if (!u) return;
   const newRem = (u.remaining || 0) + amount;
   try {
-    await fetch(`${CONFIG.API}/admin_update_user`, {
+    await fetch('/admin_update_user', {
       method:'POST',
       headers:{'Content-Type':'application/json','X-Admin-Token':ADMIN_TOKEN_SESSION},
+      // body: JSON.stringify({email, plan: u.plan, remaining: newRem})
       body: JSON.stringify({
-        email,
-        plan: u.plan,
-        remaining: newRem,
-        total: u.total
-      })
+  email,
+  plan: u.plan,
+  remaining: newRem,
+  total: u.total
+})
     });
   } catch {}
   u.remaining = newRem;
@@ -1188,7 +1206,7 @@ function closeOrderModal(e) {
 ═══════════════════════════════════ */
 async function updateOrderStatus(id, status) {
   try {
-    const res = await fetch(`${CONFIG.API}/admin_update_order`, {
+    const res = await fetch('/admin_update_order', {
       method:'POST',
       headers:{'Content-Type':'application/json','X-Admin-Token':ADMIN_TOKEN_SESSION},
       body:JSON.stringify({order_id:id,status})
@@ -1201,6 +1219,7 @@ async function updateOrderStatus(id, status) {
   updateOrderStats();
   applyOrderFilters();
   updatePendingBadge();
+  // If marked paid, refresh users too
   if (status === 'paid') { await loadUsers(); }
   showToast(status==='paid'?'✅ تم تأكيد الدفع':'❌ تم الإلغاء');
   closeOrderModal();
@@ -1274,8 +1293,9 @@ function exportOrdersCSV() {
 function exportUsersCSV() {
   const h = ['البريد','الخطة','الإجمالي','المستهلك','المتبقي'];
   const rows = filteredUsers.map(u=>{
-    const ttl = u.total || 0;
-    const pd=PLAN_DATA[u.plan];
+       const ttl = u.total || 0;
+    // const pd=PLAN_DATA[u.plan];const ttl=pd?pd.comparisons:0;
+
     return [u.email,pd?pd.label:'—',ttl,Math.max(0,ttl-(u.remaining||0)),u.remaining||0];
   });
   dlCSV([h,...rows], `users_${new Date().toISOString().slice(0,10)}.csv`);
