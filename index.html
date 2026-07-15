@@ -126,11 +126,15 @@ html.auth-in #termsNote { display: none; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 26px;
+  gap: 16px;
   text-align: center;
-  padding: 48px 20px;
+  padding: 22px 20px;
   overflow-y: auto;
 }
+.hero::-webkit-scrollbar { width: 4px; }
+.hero::-webkit-scrollbar-track { background: transparent; }
+.hero::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 2px; }
+.hero::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 .hero.off { display: none; }
 
 .hero-eyebrow {
@@ -149,7 +153,7 @@ html.auth-in #termsNote { display: none; }
 .hero-eyebrow i { font-size: 0.75rem; }
 
 .hero h1 {
-  font-size: clamp(2rem, 5vw, 3.3rem);
+  font-size: clamp(1.7rem, 4vw, 2.6rem);
   font-weight: 900;
   letter-spacing: -0.03em;
   line-height: 1.15;
@@ -161,9 +165,9 @@ html.auth-in #termsNote { display: none; }
 }
 .hero p.desc {
   color: var(--text2);
-  font-size: 1.05rem;
-  line-height: 1.8;
-  max-width: 560px;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  max-width: 520px;
   animation: fadeUp 0.5s ease 0.1s both;
 }
 .hero p.desc b { color: var(--accent2); font-weight: 700; }
@@ -189,18 +193,18 @@ html.auth-in #termsNote { display: none; }
   max-width: 420px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 22px;
-  padding: 30px 28px 26px;
+  border-radius: 20px;
+  padding: 20px 24px 18px;
   animation: fadeUp 0.5s ease 0.2s both;
 }
 .cta-card-title {
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--text2);
-  margin-bottom: 18px;
+  margin-bottom: 12px;
 }
 
-.auth-buttons { display: flex; flex-direction: column; gap: 12px; }
+.auth-buttons { display: flex; flex-direction: column; gap: 10px; }
 
 .btn-google {
   display: flex;
@@ -208,7 +212,7 @@ html.auth-in #termsNote { display: none; }
   justify-content: center;
   gap: 12px;
   width: 100%;
-  padding: 14px 20px;
+  padding: 11px 20px;
   background: #ffffff;
   border: none;
   border-radius: 12px;
@@ -230,7 +234,7 @@ html.auth-in #termsNote { display: none; }
   justify-content: center;
   gap: 12px;
   width: 100%;
-  padding: 14px 20px;
+  padding: 11px 20px;
   background: var(--fb);
   border: none;
   border-radius: 12px;
@@ -253,7 +257,7 @@ html.auth-in #termsNote { display: none; }
   align-items: center;
   justify-content: center;
   gap: 6px;
-  margin-top: 16px;
+  margin-top: 10px;
   font-size: 0.76rem;
   color: var(--text3);
 }
