@@ -8,6 +8,18 @@
 <title>LIKETWIN — هل صوتك يشبه أحد كبار القرّاء؟</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script>
+/* ✅ يُنفَّذ فوراً قبل رسم الصفحة — يمنع ظهور زر Google للحظة عند إعادة التحميل
+   لمستخدم مسجّل الدخول مسبقاً، عبر قراءة آخر حالة معروفة من localStorage. */
+(function () {
+  try {
+    var cached = localStorage.getItem('lt_auth');
+    document.documentElement.classList.add(cached === 'in' ? 'auth-in' : 'auth-out');
+  } catch (e) {
+    document.documentElement.classList.add('auth-out');
+  }
+})();
+</script>
 <style>
 :root {
   --bg: #0a0e1a;
@@ -91,10 +103,17 @@ body::before {
   border: 1px solid var(--border);
   font-weight: 700;
 }
-.nav-link.dash.show { display: inline-flex; }
+html.auth-in .nav-link.dash { display: inline-flex; }
 .nav-link.dash:hover { background: rgba(79,142,247,0.1); border-color: var(--border-h); }
 
 .nav-toggle { display: none; }
+
+/* ═══ حالة تسجيل الدخول — تُحسم فوراً عبر كلاس على <html> لمنع أي وميض عند إعادة التحميل ═══ */
+#authSection { display: none; }
+#appPanel { display: none; }
+html.auth-out #authSection { display: block; }
+html.auth-in #appPanel { display: flex; flex-direction: column; gap: 14px; }
+html.auth-in #termsNote { display: none; }
 
 /* ═══ STAGE ═══ */
 .stage { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; position: relative; z-index: 1; }
@@ -265,6 +284,8 @@ body::before {
 }
 .btn-outline:hover { border-color: var(--border-h); color: var(--text); background: rgba(79,142,247,0.06); }
 .btn-outline.primary-tint { color: var(--accent2); border-color: rgba(79,142,247,0.25); }
+.btn-outline .arrow { display: inline-block; transition: transform 0.25s; }
+.btn-outline:hover .arrow { transform: translateX(-4px); }
 
 .terms-note { font-size: 0.75rem; color: var(--text3); line-height: 1.7; max-width: 380px; }
 .terms-note a { color: var(--accent2); text-decoration: none; }
@@ -523,7 +544,6 @@ audio { display: block; width: 100%; margin-top: 4px; }
 
   <nav class="nav-links">
     <a href="/pricing" class="nav-link">الأسعار</a>
-    <a href="/privacy" class="nav-link">سياسة الخصوصية</a>
     <a href="/dashboard" class="nav-link dash" id="navDashboard"><i class="fa-solid fa-gauge"></i> لوحتي</a>
   </nav>
 </header>
@@ -593,8 +613,10 @@ audio { display: block; width: 100%; margin-top: 4px; }
 
     <!-- الأزرار الثانوية -->
     <div class="secondary-actions">
-      <a href="/pricing" class="btn-outline primary-tint"><i class="fa-solid fa-crown"></i> عرض الخطط</a>
-      <a href="/dashboard" class="btn-outline" id="secDashboard" style="display:none;"><i class="fa-solid fa-gauge"></i> لوحة التحكم</a>
+      <a href="/pricing" class="btn-outline primary-tint">
+        <i class="fa-solid fa-crown"></i> عرض الخطط
+        <span class="arrow"><i class="fa-solid fa-arrow-left"></i></span>
+      </a>
     </div>
 
     <p class="terms-note" id="termsNote">
@@ -904,23 +926,17 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
 window.idleLabel = 'ارفع ملفاً (يتطلب اشتراك)';
 
 async function checkUserStatus() {
-  const authSection = document.getElementById('authSection');
-  const appPanel    = document.getElementById('appPanel');
-  const navDash     = document.getElementById('navDashboard');
-  const secDash     = document.getElementById('secDashboard');
-  const termsNote   = document.getElementById('termsNote');
+  const html = document.documentElement;
 
   try {
     const res = await fetch(`${CONFIG.API}/get_user_info`, { credentials: 'include' });
     const data = await res.json();
 
     if (data.status === "ok" && data.user) {
-      // مستخدم مسجّل الدخول
-      authSection.style.display = 'none';
-      appPanel.classList.add('show');
-      navDash.classList.add('show');
-      secDash.style.display = 'inline-flex';
-      termsNote.style.display = 'none';
+      // مستخدم مسجّل الدخول — يظهر حقل رفع الصوت فوراً بلا وميض
+      html.classList.remove('auth-out');
+      html.classList.add('auth-in');
+      try { localStorage.setItem('lt_auth', 'in'); } catch (e) {}
 
       if (data.user.name) {
         document.getElementById('appPanelGreeting').textContent = `أهلاً بعودتك، ${data.user.name}`;
@@ -937,11 +953,10 @@ async function checkUserStatus() {
     }
   } catch (e) { /* نتجاهل الخطأ — نعتبر المستخدم غير مسجل */ }
 
-  // مستخدم غير مسجل الدخول — يبقى قسم تسجيل الدخول ظاهراً
-  authSection.style.display = 'block';
-  appPanel.classList.remove('show');
-  navDash.classList.remove('show');
-  secDash.style.display = 'none';
+  // مستخدم غير مسجل الدخول — يظهر قسم تسجيل الدخول
+  html.classList.remove('auth-in');
+  html.classList.add('auth-out');
+  try { localStorage.setItem('lt_auth', 'out'); } catch (e) {}
 }
 
 /* ══════════════════════════════════════
