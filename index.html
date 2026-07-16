@@ -863,7 +863,7 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
 
   const typeOk = ALLOWED_TYPES.includes(file.type) || file.name.match(/\.(mp3|wav|m4a|ogg|webm|flac)$/i);
   if (!typeOk) {
-    setLabelState('invalid', file.name, '', 'نوع الملف غير مدعوم — يُقبل فقط: mp3, wav, m4a, webm, ogg');
+    setLabelState('invalid', file.name, '', 'نوع الملف غير مدعوم — يُقبل فقط: mp3, wav, m4a, webm, ogg, m4a');
     return;
   }
 
