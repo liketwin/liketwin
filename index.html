@@ -592,7 +592,7 @@ audio { display: block; width: 100%; margin-top: 4px; }
 
     <!-- لوحة رفع الملف (تظهر بعد تسجيل الدخول) -->
     <div class="app-panel" id="appPanel">
-      <div class="app-panel-title"><i class="fa-solid fa-circle-check"></i> <span id="appPanelGreeting">أهلاً بعودتك</span></div>
+      <div class="app-panel-title"><i class="fa-solid fa-circle-check"></i> <span id="appPanelGreeting">أهلاً بك في Liketwin</span></div>
       <div class="upload-wrap">
         <label class="file-label" for="fileInput" id="fileLabel">
           <span class="file-icon" id="fileIcon"><i class="fa-solid fa-file-audio"></i></span>
@@ -939,7 +939,7 @@ async function checkUserStatus() {
       try { localStorage.setItem('lt_auth', 'in'); } catch (e) {}
 
       if (data.user.name) {
-        document.getElementById('appPanelGreeting').textContent = `أهلاً بعودتك، ${data.user.name}`;
+        document.getElementById('appPanelGreeting').textContent = `أهلاً بك في Liketwin، ${data.user.name}`;
       }
 
       if (data.user.remaining > 0) {
