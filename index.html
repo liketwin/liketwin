@@ -18,6 +18,15 @@
   } catch (e) {
     document.documentElement.classList.add('auth-out');
   }
+  try {
+    // ✅ زر "اشترك الآن": الحالة الافتراضية دائماً "hide" حتى تتأكد الصفحة
+    // من حالة المستخدم عبر /get_user_info — هكذا لا يظهر أبداً لغير المسجّلين
+    // ولا يظهر للحظة زائفة عند إعادة التحميل قبل أن نعرف حالة الاشتراك.
+    var cachedSub = localStorage.getItem('lt_sub');
+    document.documentElement.classList.add(cachedSub === 'show' ? 'sub-show' : 'sub-hide');
+  } catch (e) {
+    document.documentElement.classList.add('sub-hide');
+  }
 })();
 </script>
 <style>
@@ -267,7 +276,8 @@ html.auth-in #termsNote { display: none; }
   flex-wrap: wrap;
   animation: fadeUp 0.5s ease 0.25s both;
 }
-.secondary-actions.hidden { display: none; }
+#secondaryActions { display: none; }
+html.sub-show #secondaryActions { display: flex; }
 .btn-outline {
   display: flex;
   align-items: center;
@@ -930,13 +940,18 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
 window.idleLabel = 'ارفع ملفاً (يتطلب اشتراك)';
 
 function updateSubscribeButton(user) {
-  const wrap = document.getElementById('secondaryActions');
-  if (!user) {
-    wrap.classList.remove('hidden'); // غير مسجل دخول — يظهر الزر
-    return;
+  const html = document.documentElement;
+  // ✅ غير مسجل دخول = لا يظهر الزر إطلاقاً (حسب الطلب)
+  // مسجل دخول بدون خطة مدفوعة نشطة = يظهر الزر
+  // مسجل دخول بخطة مدفوعة نشطة (remaining > 0) = لا يظهر
+  let shouldShow = false;
+  if (user) {
+    const hasActivePaidPlan = !!user.plan && user.plan !== 'free' && user.remaining > 0;
+    shouldShow = !hasActivePaidPlan;
   }
-  const hasActivePaidPlan = !!user.plan && user.plan !== 'free' && user.remaining > 0;
-  wrap.classList.toggle('hidden', hasActivePaidPlan);
+  html.classList.remove('sub-show', 'sub-hide');
+  html.classList.add(shouldShow ? 'sub-show' : 'sub-hide');
+  try { localStorage.setItem('lt_sub', shouldShow ? 'show' : 'hide'); } catch (e) {}
 }
 
 async function checkUserStatus() {
@@ -1224,8 +1239,9 @@ document.getElementById('btnGo').onclick = async () => {
       document.getElementById('btnSubscribeErr').style.display = subMsgs.includes(msg) ? 'inline-block' : 'none';
       view('err');
       // ✅ إن ظهر خطأ يفيد أن الخطة انتهت/غير موجودة، نعيد إظهار زر الاشتراك فوراً
+      // (المستخدم مسجل دخول أصلاً وإلا ما كان وصل لهنا، فنمرر user فاضي الخطة)
       if (subMsgs.includes(msg)) {
-        document.getElementById('secondaryActions').classList.remove('hidden');
+        updateSubscribeButton({ plan: null, remaining: 0 });
       }
       return;
     }
