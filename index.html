@@ -1302,6 +1302,17 @@ function readerCard(item) {
 }
 
 /* ══════════════════════════════════════
+   ✅ منع تشغيل أكثر من مقطع صوتي واحد في نفس الوقت
+   (event delegation لأن عناصر <audio> تُنشأ ديناميكياً)
+══════════════════════════════════════ */
+document.addEventListener('play', function (e) {
+  if (e.target.tagName !== 'AUDIO') return;
+  document.querySelectorAll('audio').forEach(function (a) {
+    if (a !== e.target && !a.paused) a.pause();
+  });
+}, true); // ✅ capture:true ضروري لأن حدث play لا ينتشر (bubble) في DOM
+
+/* ══════════════════════════════════════
    الزر الرئيسي — رفع ومعالجة
 ══════════════════════════════════════ */
 document.getElementById('btnGo').onclick = async () => {
