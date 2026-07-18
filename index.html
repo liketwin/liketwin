@@ -1110,6 +1110,9 @@ function resetToUpload() {
   // إغلاق نافذة المشاركة إن كانت مفتوحة
   closeShareModal();
 
+  // ✅ فصل مراقب التحميل الاستباقي القديم لتفادي أي تسرّب ذاكرة
+  if (audioWarmObserver) { try { audioWarmObserver.disconnect(); } catch (e) {} audioWarmObserver = null; }
+
   view('hero');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -1271,20 +1274,52 @@ function safeAudioUrl(u) {
 }
 
 /* ══════════════════════════════════════
-   ✅ التحميل الاستباقي (Preload) لمقاطع النتائج
-   بمجرد ظهور النتائج، نبدأ فوراً في تحميل كل ملفات
-   الصوت في الخلفية (preload="auto") بدل الانتظار حتى
-   يضغط المستخدم على تشغيل — بهذا يكون التشغيل فورياً
-   بدون أي تأخير لرحلة الطلب/الرد إلى السيرفر.
+   ✅ تحميل استباقي "ذكي" لمقاطع النتائج
+   بدل تحميل كل المقاطع دفعة واحدة (كان يُنتج ازدحاماً
+   على قناة الاتصال لأن المتصفح يسمح بعدد محدود من
+   الاتصالات المتزامنة لكل نطاق، فتتأخر كل الملفات معاً)،
+   نُحمّل مسبقاً فقط:
+   1) المقاطع الظاهرة فعلياً على الشاشة (IntersectionObserver)
+   2) أو المقطع الذي يُمرّر المستخدم الماوس فوقه (نية تشغيل واضحة)
+   بهذا نمنح الأولوية للمقطع المطلوب فعلاً بدل مزاحمته
+   بعشرات الطلبات غير الضرورية.
 ══════════════════════════════════════ */
+let audioWarmObserver = null;
+
+function warmUpAudioEl(a) {
+  if (!a || a.dataset.warmed === '1') return;
+  // نتجاهل التحميل إن كان المستخدم مشغّلاً صوتاً حالياً حتى لا نزاحمه على القناة
+  const anyPlaying = document.querySelector('audio:not([paused])');
+  if (anyPlaying && anyPlaying !== a) return;
+  try {
+    a.preload = 'auto';
+    a.load();
+    a.dataset.warmed = '1';
+  } catch (e) { /* تجاهل أي متصفح لا يدعم load() بهذا الشكل */ }
+}
+
 function warmUpResultAudios() {
-  // نفّذها بعد أن يرسم المتصفح الـ DOM الجديد كي لا نعطّل عرض النتائج
   requestAnimationFrame(() => {
-    document.querySelectorAll('#readersBody audio').forEach((a) => {
-      try {
-        a.preload = 'auto'; // تأكيد إضافي حتى لو لم تُطبّق الخاصية HTML
-        a.load();           // يجبر المتصفح على بدء التحميل فوراً بدل انتظار أول ضغط تشغيل
-      } catch (e) { /* تجاهل أي متصفح لا يدعم load() بهذا الشكل */ }
+    const audios = document.querySelectorAll('#readersBody audio');
+    if (!audios.length) return;
+
+    // تحميل فوري لأول مقطعين فقط (الأعلى تطابقاً) — الأكثر ترجيحاً للاستماع
+    audios.forEach((a, i) => { if (i < 2) warmUpAudioEl(a); });
+
+    // تحميل الباقي فقط عند دخوله فعلياً في نطاق الرؤية
+    if (audioWarmObserver) audioWarmObserver.disconnect();
+    if ('IntersectionObserver' in window) {
+      audioWarmObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) warmUpAudioEl(entry.target);
+        });
+      }, { root: null, rootMargin: '150px', threshold: 0.1 });
+      audios.forEach((a) => audioWarmObserver.observe(a));
+    }
+
+    // تحميل فوري عند مرور الماوس/اللمس فوق المقطع — نية تشغيل واضحة
+    audios.forEach((a) => {
+      a.addEventListener('pointerenter', () => warmUpAudioEl(a), { once: true });
     });
   });
 }
@@ -1305,7 +1340,7 @@ function readerCard(item) {
         <span>مقطع ${i + 1}</span>
         <span class="clip-pct">${clipPct}%</span>
       </div>
-      ${audioSrc ? `<audio controls preload="auto"><source src="${audioSrc.replace(/"/g, '')}" type="audio/wav"></audio>` : ''}
+      ${audioSrc ? `<audio controls preload="none"><source src="${audioSrc.replace(/"/g, '')}" type="audio/wav"></audio>` : ''}
     </div>`;
   }).join('');
   return `
