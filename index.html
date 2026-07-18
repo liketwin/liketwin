@@ -917,7 +917,7 @@ document.getElementById('btnFacebookLogin').href = `${CONFIG.API}/auth/facebook`
 ══════════════════════════════════════ */
 const MAX_DURATION_SEC = 60;
 const MAX_SIZE_MB      = 20;
-const ALLOWED_TYPES    = ['audio/mpeg','audio/wav','audio/webm','audio/mp4','audio/ogg','audio/x-m4a','audio/m4a'];
+const ALLOWED_TYPES    = ['audio/mpeg','audio/wav','audio/webm','audio/acc','audio/mp4','audio/ogg','audio/x-m4a','audio/m4a'];
 
 /* ══════════════════════════════════════
    دوال مساعدة للـ UI
@@ -990,9 +990,9 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
     return;
   }
 
-  const typeOk = ALLOWED_TYPES.includes(file.type) || file.name.match(/\.(mp3|wav|m4a|aac|ogg|webm|flac)$/i);
+  const typeOk = ALLOWED_TYPES.includes(file.type) || file.name.match(/\.(mp3|wav|m4a|mp4|aac|ogg|webm|flac)$/i);
   if (!typeOk) {
-    setLabelState('invalid', file.name, '', 'نوع الملف غير مدعوم — يُقبل فقط: mp3, wav, m4a, webm, ogg, aac');
+    setLabelState('invalid', file.name, '', 'نوع الملف غير مدعوم — يُقبل فقط: mp3, wav, m4a, mp4, webm, ogg, aac');
     return;
   }
 
@@ -1327,7 +1327,7 @@ function esc(str) {
 function safeAudioUrl(u) {
   if (!u || typeof u !== 'string') return '';
   if (u.includes('..')) return '';                      // 🔒 يمنع Path Traversal
-  if (!/^\/audio\/[\w-]+\.(wav|mp3|m4a|ogg|webm)$/i.test(u)) return ''; // 🔒 نمط صارم: اسم ملف + امتداد صوتي فقط
+  if (!/^\/audio\/[\w-]+\.(wav|mp3|m4a|mp4|aac|ogg|webm)$/i.test(u)) return ''; // 🔒 نمط صارم: اسم ملف + امتداد صوتي فقط
   return u;
 }
 
