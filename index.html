@@ -905,8 +905,36 @@ audio { display: block; width: 100%; margin-top: 4px; }
 
 <script>
 /* ══════════════════════════════════════
+   ✅ استلام التوكن من URL fragment بعد العودة من OAuth
+   (Google / TikTok) — بعض المتصفحات (Safari ITP، Chrome
+   Privacy Sandbox) كتحجب كوكيز الطرف الثالث (third-party
+   cookies) بين دومين الباك أند ودومين الفرونت إند، فكيبقى
+   /get_user_info يرجع 401 رغم نجاح تسجيل الدخول فعلياً.
+   الحل: الباك أند كيبعث التوكن أيضاً عبر #auth_token=... فرابط
+   التوجيه، ونقراه هنا ونخزنو فـ sessionStorage، ونبعتوه بعد
+   ذلك كـ Authorization: Bearer مع كل طلب محمي — بلا الاعتماد
+   الكلي على الكوكي.
+══════════════════════════════════════ */
+(function pickUpTokenFromHash() {
+  const m = location.hash.match(/auth_token=([^&]+)/);
+  if (m) {
+    try { sessionStorage.setItem('lt_bearer', decodeURIComponent(m[1])); } catch (e) {}
+    // ✅ نمسحو التوكن من شريط العنوان فوراً بعد قراءته — باش ما يبقاش
+    // ظاهراً فـ التاريخ (history) ولا قابل للمشاركة عن طريق الخطأ
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+})();
+
+function authHeaders() {
+  let t = null;
+  try { t = sessionStorage.getItem('lt_bearer'); } catch (e) {}
+  return t ? { 'Authorization': 'Bearer ' + t } : {};
+}
+
+/* ══════════════════════════════════════
    إعداد روابط تسجيل الدخول (OAuth)
-   ✅ التوكن في httpOnly Cookie — لا حاجة لقراءته من JS
+   ✅ التوكن فـ httpOnly Cookie كخط دفاع أول، وفـ sessionStorage
+   (عبر authHeaders أعلاه) كخط دفاع ثاني إلا كانت الكوكيز محجوبة
 ══════════════════════════════════════ */
 document.getElementById('btnGoogleLogin').href = `${CONFIG.API}/auth/google`;
 document.getElementById('btnTiktokLogin').href = `${CONFIG.API}/auth/tiktok`;
@@ -1078,7 +1106,10 @@ async function checkUserStatus() {
   const html = document.documentElement;
 
   try {
-    const res = await fetch(`${CONFIG.API}/get_user_info`, { credentials: 'include' });
+    const res = await fetch(`${CONFIG.API}/get_user_info`, {
+      credentials: 'include',
+      headers: authHeaders(),   // ✅ إضافة جديدة — احتياط لحالة حجب third-party cookies
+    });
     const data = await res.json();
 
     if (data.status === "ok" && data.user) {
@@ -1445,6 +1476,7 @@ document.getElementById('btnGo').onclick = async () => {
       body: fd,
       signal: ctrl.signal,
       credentials: 'include',
+      headers: authHeaders(),   // ✅ إضافة جديدة — احتياط لحالة حجب third-party cookies
     });
 
     const data = await res.json();
