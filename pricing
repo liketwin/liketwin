@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<script>
+(function() {
+  // ✅ التوكن في httpOnly Cookie — لا إعادة توجيه عبر URL
+})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>اشترك — قارئ الصوت</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root {
+  --bg: #0a0e1a;
+  --surface: #111827;
+  --surface2: #1a2235;
+  --surface3: #0f1623;
+  --border: rgba(100,140,255,0.12);
+  --border-h: rgba(100,140,255,0.3);
+  --accent: #4f8ef7;
+  --accent2: #7eb3ff;
+  --glow: rgba(79,142,247,0.22);
+  --text: #e8edf8;
+  --text2: #8a9bbf;
+  --text3: #5a6a8a;
+  --error: #f56565;
+  --success: #48bb78;
+  --gold: #f6c90e;
+  --gold2: #ffe066;
+  --wa: #25D366;
+  --wa2: #4ade80;
+  --tiktok: #ff004f;
+  --tiktok2: #00f2ea;
+  --free: #00e5b0;
+  --free2: #5fffd9;
+  --free-dim: rgba(0,229,176,0.10);
+  --free-border: rgba(0,229,176,0.28);
+  --free-glow: rgba(0,229,176,0.22);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Tajawal', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 70% 45% at 15% 10%, rgba(79,142,247,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 85% 80%, rgba(126,179,255,0.05) 0%, transparent 55%);
+  pointer-events: none; z-index: 0;
+}
+
+.topbar {
+  flex-shrink: 0; height: 64px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 0 24px;
+  background: rgba(10,14,26,0.97);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+  position: sticky; top: 0; z-index: 50;
+}
+.logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+.logo svg { width: 42px; height: 42px; flex-shrink: 0; }
+.logo-name { font-size: 1.1rem; font-weight: 700; color:#1877F2;}
+.nav-links { display: flex; gap: 8px; }
+.nav-link {
+  padding: 8px 16px; border: 1px solid var(--border); border-radius: 9px;
+  color: var(--text2); text-decoration: none; font-size: 0.85rem; font-weight: 600;
+  transition: all 0.2s;
+}
+.nav-link:hover { background: rgba(79,142,247,0.08); border-color: var(--border-h); color: var(--accent2); }
+.nav-link.active { background: rgba(79,142,247,0.1); border-color: rgba(79,142,247,0.3); color: var(--accent2); }
+
+.main {
+  position: relative; z-index: 1; flex: 1;
+  padding: 60px 20px 80px;
+  display: flex; flex-direction: column; align-items: center; gap: 48px;
+}
+.page-head { text-align: center; }
+.page-head h1 {
+  font-size: clamp(1.9rem, 4.5vw, 3rem); font-weight: 900;
+  letter-spacing: -0.03em; line-height: 1.1;
+  background: linear-gradient(135deg, var(--text), var(--accent2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  margin-bottom: 12px;
+}
+.page-head p { color: var(--text2); font-size: 1rem; line-height: 1.7; }
+.user-badge {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 50px;
+  padding: 8px 16px; margin-top: 14px;
+}
+.user-badge-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 8px rgba(72,187,120,0.5); flex-shrink: 0; }
+.user-badge-text { font-size: 0.82rem; color: var(--text2); }
+.user-badge-text strong { color: var(--accent2); }
+
+.login-banner {
+  background: rgba(245,101,101,0.08); border: 1px solid rgba(245,101,101,0.25);
+  border-radius: 12px; padding: 14px 20px;
+  display: flex; align-items: center; gap: 12px;
+  font-size: 0.88rem; color: var(--error);
+}
+.login-banner a { color: var(--accent2); font-weight: 700; text-decoration: none; }
+.login-banner a:hover { text-decoration: underline; }
+
+.plans {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 18px; width: 100%; max-width: 1100px;
+}
+
+.plan-free {
+  position: relative;
+  border-radius: 20px;
+  padding: 2px;
+  background: linear-gradient(135deg, rgba(0,229,176,0.55), rgba(0,229,176,0.08) 60%, rgba(79,142,247,0.18));
+  box-shadow: 0 0 28px var(--free-glow), 0 4px 24px rgba(0,0,0,0.35);
+  animation: freePulse 3s ease-in-out infinite;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.22s;
+}
+.plan-free:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 0 44px rgba(0,229,176,0.38), 0 8px 32px rgba(0,0,0,0.4);
+}
+@keyframes freePulse {
+  0%, 100% { box-shadow: 0 0 24px var(--free-glow), 0 4px 24px rgba(0,0,0,0.35); }
+  50%       { box-shadow: 0 0 42px rgba(0,229,176,0.32), 0 4px 24px rgba(0,0,0,0.35); }
+}
+
+.plan-free.sold-out {
+  background: linear-gradient(135deg, rgba(90,106,138,0.4), rgba(90,106,138,0.08) 60%, rgba(42,54,80,0.3));
+  box-shadow: 0 4px 24px rgba(0,0,0,0.35);
+  animation: none;
+  cursor: default;
+  pointer-events: none;
+}
+.plan-free.sold-out:hover {
+  transform: none;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.35);
+}
+
+.plan-free-inner {
+  background: linear-gradient(160deg, #0b1420 0%, #0d1a18 100%);
+  border-radius: 18px;
+  padding: 26px 22px 22px;
+  display: flex; flex-direction: column; gap: 16px;
+  position: relative; overflow: hidden;
+  height: 100%;
+}
+.plan-free-inner::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--free), var(--free2), transparent);
+  opacity: 0.7;
+  transition: opacity 0.4s;
+}
+.plan-free.sold-out .plan-free-inner {
+  background: linear-gradient(160deg, #0b1018 0%, #0d1115 100%);
+}
+.plan-free.sold-out .plan-free-inner::before {
+  background: linear-gradient(90deg, transparent, #3a4a5a, #4a5a6a, transparent);
+  opacity: 0.3;
+}
+
+.sold-out-state {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  padding: 6px 0 4px;
+}
+.sold-out-state.visible { display: flex; }
+
+.sold-out-icon-wrap {
+  position: relative;
+  width: 64px; height: 64px;
+}
+.sold-out-icon-ring {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(90,106,138,0.4);
+  background: rgba(90,106,138,0.08);
+  display: flex; align-items: center; justify-content: center;
+}
+.sold-out-icon-ring i {
+  font-size: 26px;
+  color: #5a6a8a;
+}
+.sold-out-icon-spin {
+  position: absolute; inset: -5px;
+  border-radius: 50%;
+  border: 2px dashed rgba(90,106,138,0.25);
+  animation: spinSlow 8s linear infinite;
+}
+@keyframes spinSlow { to { transform: rotate(360deg); } }
+
+.sold-out-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(90,106,138,0.15);
+  border: 1px solid rgba(90,106,138,0.3);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 0.72rem; font-weight: 900; color: #7a8aaa;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.sold-out-tag-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: #7a8aaa; opacity: 0.6;
+}
+
+.sold-out-title {
+  font-size: 1.05rem; font-weight: 900;
+  color: #8a9bbf;
+  line-height: 1.2;
+}
+.sold-out-sub {
+  font-size: 0.8rem; color: var(--text3); line-height: 1.6;
+}
+
+.sold-out-bar-wrap {
+  width: 100%;
+  background: rgba(90,106,138,0.12);
+  border-radius: 20px; height: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(90,106,138,0.15);
+}
+.sold-out-bar-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #3a4a5a, #5a6a8a);
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.sold-out-bar-fill::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent 40%, rgba(255,255,255,0.07) 50%, transparent 60%);
+  animation: sheen 2.5s ease-in-out infinite;
+}
+@keyframes sheen {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.sold-out-bar-label {
+  font-size: 0.72rem; color: var(--text3);
+  display: flex; justify-content: space-between; width: 100%; margin-top: 4px;
+}
+.sold-out-bar-label span:last-child { color: #7a8aaa; font-weight: 700; }
+
+.btn-notify {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 11px 16px; margin-top: 2px;
+  background: rgba(90,106,138,0.12);
+  border: 1px dashed rgba(90,106,138,0.3); border-radius: 11px;
+  font-family: 'Tajawal', sans-serif; font-size: 0.88rem; font-weight: 700;
+  color: #5a6a8a;
+  cursor: not-allowed;
+}
+
+.active-free-state { display: flex; flex-direction: column; gap: 16px; }
+.active-free-state.hidden { display: none; }
+
+.free-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: linear-gradient(135deg, rgba(0,229,176,0.18), rgba(0,229,176,0.06));
+  border: 1px solid rgba(0,229,176,0.35);
+  border-radius: 20px; padding: 4px 11px;
+  font-size: 0.7rem; font-weight: 900; color: var(--free);
+  letter-spacing: 0.02em; width: fit-content;
+}
+.free-limited {
+  display: flex; align-items: center; gap: 7px;
+  background: rgba(0,229,176,0.06); border: 1px dashed rgba(0,229,176,0.22);
+  border-radius: 8px; padding: 7px 11px;
+}
+.free-limited-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--free);
+  animation: blinkDot 1.4s ease-in-out infinite; flex-shrink: 0;
+}
+@keyframes blinkDot { 0%,100%{opacity:1;} 50%{opacity:0.25;} }
+.free-limited-text { font-size: 0.74rem; color: var(--free); font-weight: 700; }
+.free-price { display: flex; align-items: flex-end; gap: 5px; line-height: 1; }
+.free-price .amount {
+  font-size: 2.6rem; font-weight: 900; letter-spacing: -0.05em;
+  background: linear-gradient(135deg, var(--free), var(--free2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.free-price .currency { font-size: 1rem; font-weight: 700; color: var(--free); opacity: 0.7; margin-bottom: 6px; }
+.free-features { display: flex; flex-direction: column; gap: 8px; }
+.free-feat { display: flex; align-items: center; gap: 8px; font-size: 0.84rem; color: var(--text2); }
+.free-feat-icon {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: rgba(0,229,176,0.12); color: var(--free);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; flex-shrink: 0;
+}
+.free-feat strong { color: var(--text); font-weight: 700; }
+.btn-free-start {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 12px 16px; margin-top: 4px;
+  background: linear-gradient(135deg, var(--free), #00b890);
+  border: none; border-radius: 11px;
+  font-family: 'Tajawal', sans-serif; font-size: 0.92rem; font-weight: 700; color: #061a14;
+  cursor: pointer; transition: all 0.25s; box-shadow: 0 0 18px rgba(0,229,176,0.28);
+}
+.btn-free-start:hover { box-shadow: 0 0 30px rgba(0,229,176,0.45); transform: translateY(-2px); }
+.btn-free-start:active { transform: translateY(0); }
+
+.btn-free-start.activated {
+  background: linear-gradient(135deg, #0d2a20, #0a1e18) !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  border: 1px solid rgba(0,229,176,0.25) !important;
+  color: var(--free) !important;
+  opacity: 0.85;
+  transform: none !important;
+}
+.btn-free-start.activated:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+.btn-free-start.activated .check-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px; height: 20px;
+  background: rgba(0,229,176,0.15);
+  border-radius: 50%;
+  font-size: 11px;
+}
+
+.plan {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 18px;
+  padding: 28px 24px; display: flex; flex-direction: column; gap: 18px;
+  cursor: pointer; transition: border-color 0.22s, transform 0.2s, box-shadow 0.22s;
+  position: relative;
+}
+.plan:hover { transform: translateY(-4px); border-color: var(--border-h); }
+.plan.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 8px 32px rgba(79,142,247,0.2);
+  transform: translateY(-4px);
+}
+.plan.popular { border-color: rgba(246,201,14,0.35); }
+.plan.popular.selected { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 8px 32px rgba(246,201,14,0.18); }
+.plan.popular:hover { border-color: rgba(246,201,14,0.6); }
+.popular-badge {
+  position: absolute; top: 14px; left: 14px;
+  background: linear-gradient(135deg, var(--gold), var(--gold2));
+  color: #1a1100; font-size: 0.7rem; font-weight: 900;
+  padding: 3px 10px; border-radius: 20px;
+}
+.plan-check {
+  position: absolute; top: 14px; right: 14px;
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 2px solid var(--border-h);
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s; font-size: 10px; color: transparent;
+}
+.plan.selected .plan-check { background: var(--accent); border-color: var(--accent); color: #fff; }
+.plan.popular.selected .plan-check { background: var(--gold); border-color: var(--gold); color: #1a1100; }
+.plan-name { font-size: 1rem; font-weight: 700; color: var(--text2); padding-top: 4px; }
+.plan-price { display: flex; align-items: flex-end; gap: 4px; line-height: 1; }
+.plan-price .amount { font-size: 2.4rem; font-weight: 900; color: var(--text); letter-spacing: -0.04em; }
+.plan-price .currency { font-size: 1rem; font-weight: 700; color: var(--text2); margin-bottom: 6px; }
+.plan-features { display: flex; flex-direction: column; gap: 8px; }
+.feat { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text2); }
+.feat-icon {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: rgba(79,142,247,0.12); color: var(--accent2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; flex-shrink: 0;
+}
+.plan.popular .feat-icon { background: rgba(246,201,14,0.12); color: var(--gold2); }
+.feat strong { color: var(--text); font-weight: 700; }
+
+.pay-section { width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 16px; }
+.pay-summary {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  padding: 16px 20px; display: flex; flex-direction: column; gap: 10px;
+}
+.summary-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: var(--text2); }
+.summary-row.total { padding-top: 10px; border-top: 1px solid var(--border); font-size: 1rem; font-weight: 700; color: var(--text); }
+.val-accent { color: var(--accent2); font-weight: 700; }
+
+.wa-card { background: var(--surface); border: 1px solid rgba(37,211,102,0.2); border-radius: 18px; overflow: hidden; }
+.wa-head {
+  display: flex; align-items: center; gap: 14px; padding: 18px 22px;
+  background: rgba(37,211,102,0.05); border-bottom: 1px solid rgba(37,211,102,0.12);
+}
+.wa-head-icon {
+  width: 48px; height: 48px; background: rgba(37,211,102,0.12); border-radius: 12px;
+  display: flex; align-items: center; justify-content: center; font-size: 26px; flex-shrink: 0;
+  border: 1px solid rgba(37,211,102,0.2);
+}
+.wa-head-text h3 { font-size: 1rem; font-weight: 700; color: var(--wa); margin-bottom: 3px; }
+.wa-head-text p { font-size: 0.78rem; color: var(--text3); line-height: 1.5; }
+.order-display {
+  margin: 18px 22px 0;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 11px;
+  padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.order-label { font-size: 0.78rem; color: var(--text3); font-weight: 600; }
+.order-id-val { font-size: 0.9rem; font-weight: 700; color: var(--accent2); font-family: monospace; letter-spacing: 0.05em; }
+.order-copy {
+  background: rgba(79,142,247,0.1); border: 1px solid rgba(79,142,247,0.2); border-radius: 7px;
+  padding: 4px 10px; color: var(--accent2); font-size: 0.75rem; font-weight: 700;
+  cursor: pointer; font-family: 'Tajawal', sans-serif; transition: all 0.15s;
+}
+.order-copy:hover { background: rgba(79,142,247,0.2); }
+.wa-steps { padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; }
+.wa-step {
+  display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 11px;
+  transition: border-color 0.2s;
+}
+.wa-step:hover { border-color: rgba(37,211,102,0.2); }
+.step-num {
+  width: 26px; height: 26px; background: rgba(37,211,102,0.12); color: var(--wa);
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; font-weight: 900; flex-shrink: 0; margin-top: 1px;
+}
+.step-text { font-size: 0.85rem; color: var(--text2); line-height: 1.6; }
+.step-text strong { color: var(--text); font-weight: 700; }
+.step-text .highlight {
+  display: inline-block; background: rgba(37,211,102,0.1); color: var(--wa2);
+  padding: 1px 8px; border-radius: 5px; font-size: 0.8rem; font-weight: 700; margin: 0 2px;
+}
+.wa-msg-preview { margin: 0 22px 20px; background: var(--surface3); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.wa-msg-label { padding: 8px 14px; background: rgba(37,211,102,0.06); border-bottom: 1px solid var(--border); font-size: 0.72rem; color: var(--text3); font-weight: 600; letter-spacing: 0.05em; }
+.wa-msg-body { padding: 12px 14px; font-size: 0.83rem; color: var(--text2); line-height: 1.7; direction: rtl; white-space: pre-line; }
+.wa-msg-body span { color: var(--accent2); font-weight: 700; }
+.wa-msg-body .order-span { color: var(--gold2); }
+.btn-subscribe {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 15px 20px;
+  background: linear-gradient(135deg, var(--accent), #3a7aee);
+  border: none; border-radius: 12px;
+  font-family: 'Tajawal', sans-serif; font-size: 1rem; font-weight: 700; color: #fff;
+  cursor: pointer; transition: all 0.2s; box-shadow: 0 0 24px rgba(79,142,247,0.3); margin-top: 4px;
+}
+.btn-subscribe:hover { box-shadow: 0 0 36px rgba(79,142,247,0.45); transform: translateY(-2px); }
+.btn-subscribe:active { transform: translateY(0); }
+.btn-subscribe:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-wa {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: calc(100% - 44px); margin: 0 22px 22px; padding: 15px 20px;
+  background: linear-gradient(135deg, #25D366, #1aad54);
+  border: none; border-radius: 12px;
+  font-family: 'Tajawal', sans-serif; font-size: 1rem; font-weight: 700; color: #fff;
+  cursor: pointer; text-decoration: none; transition: all 0.2s; box-shadow: 0 0 24px rgba(37,211,102,0.25);
+}
+.btn-wa:hover { box-shadow: 0 0 36px rgba(37,211,102,0.4); transform: translateY(-2px); }
+.btn-wa:active { transform: translateY(0); }
+.wa-footer {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 12px 22px; border-top: 1px solid var(--border);
+  font-size: 0.75rem; color: var(--text3); background: rgba(0,0,0,0.12);
+}
+.wa-footer-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--wa); flex-shrink: 0; box-shadow: 0 0 6px rgba(37,211,102,0.5); }
+.status-pending {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(246,201,14,0.12); color: var(--gold2);
+  border: 1px solid rgba(246,201,14,0.25); border-radius: 20px;
+  padding: 3px 10px; font-size: 0.72rem; font-weight: 700;
+}
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); }
+
+.free-success-card {
+  background: linear-gradient(135deg, rgba(0,229,176,0.08), rgba(0,229,176,0.03));
+  border: 1px solid rgba(0,229,176,0.3); border-radius: 18px;
+  padding: 28px 24px;
+  display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center;
+}
+.free-success-icon {
+  width: 60px; height: 60px; border-radius: 50%;
+  background: rgba(0,229,176,0.12); border: 1px solid rgba(0,229,176,0.3);
+  display: flex; align-items: center; justify-content: center; font-size: 28px;
+}
+.free-success-title { font-size: 1.15rem; font-weight: 900; color: var(--free2); }
+.free-success-desc { font-size: 0.88rem; color: var(--text2); line-height: 1.7; }
+.free-success-order {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 18px; font-size: 0.82rem; color: var(--text3); width: 100%; text-align: center;
+}
+.free-success-order strong { color: var(--free2); font-family: monospace; letter-spacing: 0.05em; }
+
+.loading-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(10,14,26,0.75); backdrop-filter: blur(4px);
+  z-index: 200; align-items: center; justify-content: center;
+}
+.loading-overlay.visible { display: flex; }
+.loading-box {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+  padding: 32px 40px; display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+.spinner {
+  width: 44px; height: 44px; border: 3px solid var(--border);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 0.9rem; color: var(--text2); font-weight: 600; }
+
+.toast {
+  position: fixed; bottom: 28px; left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--surface2); border: 1px solid rgba(37,211,102,0.3); color: var(--wa2);
+  padding: 10px 22px; border-radius: 30px; font-size: 0.88rem; font-weight: 600;
+  opacity: 0; transition: all 0.3s; z-index: 999; pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.error { border-color: rgba(245,101,101,0.3); color: var(--error); }
+
+.section-order-created { display: none; flex-direction: column; gap: 14px; }
+.section-order-created.visible { display: flex; }
+.section-before-submit { display: flex; flex-direction: column; gap: 14px; }
+.section-before-submit.hidden { display: none; }
+.section-not-auth { display: none; flex-direction: column; gap: 14px; text-align: center; }
+.section-not-auth.visible { display: flex; }
+.auth-buttons-group { display: flex; flex-direction: column; gap: 10px; }
+
+.btn-login {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 15px 20px;
+  background: #ffffff; border: none; border-radius: 12px;
+  font-family: 'Tajawal', sans-serif; font-size: 1rem; font-weight: 700; color: #1a1a2e;
+  cursor: pointer; text-decoration: none; transition: all 0.2s;
+  box-shadow: 0 2px 14px rgba(0,0,0,0.35);
+}
+.btn-login:hover { background: #f0f4ff; transform: translateY(-2px); box-shadow: 0 8px 28px rgba(79,142,247,0.28); }
+.btn-login-tiktok {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 15px 20px;
+  background: #000000; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
+  font-family: 'Tajawal', sans-serif; font-size: 1rem; font-weight: 700; color: #ffffff;
+  cursor: pointer; text-decoration: none; transition: all 0.2s;
+  box-shadow: 0 2px 14px rgba(0,0,0,0.5);
+}
+.btn-login-tiktok:hover { background: #111111; transform: translateY(-2px); box-shadow: 0 8px 28px rgba(255,0,79,0.25), 0 8px 28px rgba(0,242,234,0.15); }
+.or-sep { display: flex; align-items: center; gap: 10px; }
+.or-line { flex: 1; height: 1px; background: var(--border); }
+.or-text { font-size: 0.72rem; color: var(--text3); }
+.g-logo { width: 20px; height: 20px; flex-shrink: 0; }
+.tiktok-logo { width: 20px; height: 20px; flex-shrink: 0; }
+.not-auth-note { font-size: 0.82rem; color: var(--text3); }
+
+.section-free-auth { display: none; flex-direction: column; gap: 14px; text-align: center; }
+.section-free-auth.visible { display: flex; }
+.section-free-success { display: none; flex-direction: column; gap: 14px; }
+.section-free-success.visible { display: flex; }
+
+@media (max-width: 900px) {
+  .plans { grid-template-columns: repeat(2, 1fr); max-width: 600px; }
+}
+@media (max-width: 560px) {
+  .plans { grid-template-columns: 1fr; max-width: 400px; }
+  .plan { padding: 22px 20px; }
+  .main { padding: 40px 16px 60px; gap: 36px; }
+}
+@media (max-width: 480px) {
+  .nav-links { gap: 6px; }
+  .nav-link { padding: 7px 12px; font-size: 0.78rem; }
+  .wa-steps { padding: 16px; }
+  .wa-head { padding: 14px 16px; }
+  .btn-wa { width: calc(100% - 32px); margin: 0 16px 16px; }
+  .wa-msg-preview { margin: 0 16px 16px; }
+  .wa-footer { padding: 10px 16px; }
+  .order-display { margin: 14px 16px 0; }
+}
+
+.footer {
+  direction: rtl; font-family: 'Tajawal', sans-serif;
+  background: #0a0e1a; border-top: 1px solid rgba(100,140,255,0.1);
+  min-height: 40px; flex-shrink: 0;
+  display: flex; align-items: center; padding: 8px 16px;
+}
+.footer-content { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.footer-copy { color: #5a6a8a; font-size: 0.78rem; text-decoration: none; transition: 0.2s; }
+.footer-link { color: #5a6a8a; font-size: 0.78rem; text-decoration: none; transition: 0.2s; }
+.footer-link:hover { color: #7eb3ff; }
+.footer-sep { color: #1e2a3a; }
+.footer-wa {
+  display: flex; align-items: center; gap: 6px;
+  color: #25d366; font-size: 0.78rem; font-weight: 700;
+  text-decoration: none; opacity: 0.8; transition: 0.2s;
+}
+.footer-wa:hover { opacity: 1; }
+@media (max-width: 800px) {
+  .footer { justify-content: center; text-align: center; padding: 10px 12px; }
+  .footer-content { justify-content: center; gap: 10px; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="logo" href="/">
+    <svg width="500" height="500" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="bg" x1="10%" y1="0%" x2="90%" y2="100%">
+          <stop offset="0%" stop-color="#1a90ff"/>
+          <stop offset="100%" stop-color="#0050d0"/>
+        </linearGradient>
+        <filter id="sh" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="#0030a0" flood-opacity="0.35"/>
+        </filter>
+      </defs>
+      <path d="M250 28 C372 28, 472 118, 472 226 C472 334, 372 424, 250 424 C228 424, 208 420, 190 414 C172 432, 152 448, 136 460 C122 470, 110 474, 104 470 C98 466, 98 458, 102 448 C108 432, 112 414, 110 396 C108 388, 104 380, 100 372 C68 338, 28 286, 28 226 C28 118, 128 28, 250 28 Z" fill="#1877F2" filter="url(#sh)"/>
+      <rect x="120" y="204" width="20" height="44" rx="10" fill="white" opacity="0.48"/>
+      <rect x="144" y="183" width="20" height="86" rx="10" fill="white" opacity="0.62"/>
+      <rect x="170" y="158" width="22" height="136" rx="11" fill="white" opacity="0.76"/>
+      <rect x="196" y="137" width="22" height="178" rx="11" fill="white" opacity="0.87"/>
+      <rect x="224" y="120" width="24" height="212" rx="12" fill="white" opacity="0.96"/>
+      <rect x="252" y="120" width="24" height="212" rx="12" fill="white" opacity="1.0"/>
+      <rect x="280" y="137" width="22" height="178" rx="11" fill="white" opacity="0.87"/>
+      <rect x="306" y="158" width="22" height="136" rx="11" fill="white" opacity="0.76"/>
+      <rect x="332" y="183" width="20" height="86" rx="10" fill="white" opacity="0.62"/>
+      <rect x="356" y="204" width="20" height="44" rx="10" fill="white" opacity="0.48"/>
+    </svg>
+    <span class="logo-name">LIKETWIN</span>
+  </a>
+  <nav class="nav-links">
+    <a class="nav-link" href="/">الرئيسية</a>
+    <a class="nav-link active" id="pricingNavLink" href="/pricing">الاشتراك</a>
+  </nav>
+</header>
+
+<main class="main">
+
+  <div class="page-head">
+    <h1>اختر خطتك</h1>
+    <p>الاشتراك حسب الاستخدام، وليس حسب الوقت</p>
+    <div class="user-badge" id="userBadge" style="display:none;">
+      <div class="user-badge-dot"></div>
+      <div class="user-badge-text">مرحباً، <strong id="badgeEmail">—</strong></div>
+    </div>
+  </div>
+
+  <div class="plans">
+
+    <!-- FREE PLAN -->
+    <div class="plan-free" id="freePlanCard">
+      <div class="plan-free-inner">
+
+        <div class="active-free-state" id="activeFreeState">
+          <div class="free-badge"><i class="fa-solid fa-gift"></i> مجاناً لأول 10000 شخص</div>
+          <div>
+            <div class="free-price" style="margin-top:8px;">
+              <span class="amount">0</span>
+              <span class="currency">$ دولار</span>
+            </div>
+          </div>
+          <div class="free-limited">
+            <div class="free-limited-dot"></div>
+            <span class="free-limited-text">عرض محدود — متبقي أماكن محدودة</span>
+          </div>
+          <div class="free-features">
+            <div class="free-feat">
+              <div class="free-feat-icon">✓</div>
+              <span><strong>مقارنة صوتية واحدة</strong> مجاناً</span>
+            </div>
+            <div class="free-feat">
+              <div class="free-feat-icon">✓</div>
+              <span>وصول فوري للنتيجة</span>
+            </div>
+            <div class="free-feat">
+              <div class="free-feat-icon">✓</div>
+              <span>مطابقة مع +500 قارئ</span>
+            </div>
+          </div>
+          <button class="btn-free-start" id="free-plan-btn" onclick="handleFreeStart()">
+            <i class="fa-solid fa-bolt"></i>
+            ابدأ مجاناً
+          </button>
+        </div>
+
+        <div class="sold-out-state" id="soldOutState">
+          <div class="sold-out-icon-wrap">
+            <div class="sold-out-icon-ring">
+              <i class="fa-solid fa-lock"></i>
+            </div>
+            <div class="sold-out-icon-spin"></div>
+          </div>
+          <div class="sold-out-tag">
+            <div class="sold-out-tag-dot"></div>
+            انتهى العرض
+          </div>
+          <div class="sold-out-title">نفدت الأماكن المجانية</div>
+          <div class="sold-out-sub">
+            تم استنفاد جميع الأماكن المجانية البالغ عددها 10,000 مكان
+          </div>
+          <div style="width:100%">
+            <div class="sold-out-bar-wrap">
+              <div class="sold-out-bar-fill"></div>
+            </div>
+            <div class="sold-out-bar-label">
+              <span>الأماكن المُستخدمة</span>
+              <span>10,000 / 10,000</span>
+            </div>
+          </div>
+          <div class="btn-notify">
+            <i class="fa-solid fa-lock-open" style="font-size:13px;"></i>
+            اختر خطة مدفوعة للمتابعة
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Paid Plans -->
+    <div class="plan popular selected" data-plan="starter" onclick="selectPlan(this)">
+      <div class="popular-badge">⭐ الأكثر طلباً</div>
+      <div class="plan-check">✓</div>
+      <div class="plan-name">المبتدئ</div>
+      <div class="plan-price">
+        <span class="amount">1</span>
+        <span class="currency">$ دولار</span>
+      </div>
+      <div class="plan-features">
+        <div class="feat"><div class="feat-icon">✓</div><span><strong>5</strong> مقارنات صوتية</span></div>
+        <div class="feat"><div class="feat-icon">✓</div><span>وصول فوري للنتائج</span></div>
+        <div class="feat"><div class="feat-icon">✓</div><span>مطابقة مع +500 قارئ</span></div>
+      </div>
+    </div>
+
+    <div class="plan" data-plan="pro" onclick="selectPlan(this)">
+      <div class="plan-check">✓</div>
+      <div class="plan-name">الاحترافي</div>
+      <div class="plan-price">
+        <span class="amount">5</span>
+        <span class="currency">$ دولار</span>
+      </div>
+      <div class="plan-features">
+        <div class="feat"><div class="feat-icon">✓</div><span><strong>50</strong> مقارنة صوتية</span></div>
+        <div class="feat"><div class="feat-icon">✓</div><span>وصول فوري للنتائج</span></div>
+        <div class="feat"><div class="feat-icon">✓</div><span>مطابقة مع +500 قارئ</span></div>
+      </div>
+    </div>
+
+    <div class="plan" data-plan="advanced" onclick="selectPlan(this)">
+      <div class="plan-check">✓</div>
+      <div class="plan-name">المتقدم</div>
+      <div class="plan-price">
+        <span class="amount">10</span>
+        <span class="currency">$ دولار</span>
+      </div>
+      <div class="plan-features">
+        <div class="feat"><div class="feat-icon">✓</div><span><strong>130</strong> مقارنة صوتية</span></div>
+        <div class="feat"><div class="feat-icon">✓</div><span>وصول فوري للنتائج</span></div>
+        <div class="feat"><div class="feat-icon">✓</div><span>مطابقة مع +500 قارئ</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Payment Section -->
+  <div class="pay-section" id="paySection">
+
+    <div class="section-not-auth" id="sectionNotAuth">
+      <div class="login-banner">
+        <span>🔒</span>
+        <span>يجب <a href="/login">تسجيل الدخول</a> أولاً للمتابعة</span>
+      </div>
+      <div class="auth-buttons-group">
+        <a class="btn-login" href="#" id="btnGoogleLoginNotAuth">
+          <svg class="g-logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+          </svg>
+          المتابعة بحساب Google
+        </a>
+        <div class="or-sep">
+          <div class="or-line"></div>
+          <span class="or-text">أو</span>
+          <div class="or-line"></div>
+        </div>
+        <a class="btn-login-tiktok" href="#" id="btnTiktokLoginNotAuth">
+          <svg class="tiktok-logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16.6 5.82c-.9-.98-1.4-2.26-1.4-3.62h-3.14v13.44c0 1.62-1.32 2.94-2.94 2.94a2.94 2.94 0 0 1-2.94-2.94 2.94 2.94 0 0 1 2.94-2.94c.3 0 .59.05.87.13V9.66a6.1 6.1 0 0 0-.87-.06A6.1 6.1 0 0 0 3.1 15.7a6.1 6.1 0 0 0 6.02 6.1 6.1 6.1 0 0 0 6.1-6.1V9.03a9.3 9.3 0 0 0 5.4 1.72V7.6a5.4 5.4 0 0 1-3.02-.78 5.5 5.5 0 0 1-1-1z" fill="#ffffff"/>
+          </svg>
+          المتابعة بحساب TikTok
+        </a>
+      </div>
+      <p class="not-auth-note">سيتم توجيهك لتسجيل الدخول ثم العودة هنا تلقائياً</p>
+    </div>
+
+    <div class="section-before-submit" id="sectionBeforeSubmit" style="display:none;">
+      <div class="pay-summary">
+        <div class="summary-row">
+          <span>الحساب</span>
+          <span class="val-accent" id="summaryEmail" style="direction:ltr;unicode-bidi:plaintext;">—</span>
+        </div>
+        <div class="summary-row">
+          <span>الخطة المختارة</span>
+          <span class="val-accent" id="summaryPlan">المبتدئ — 5 مقارنات</span>
+        </div>
+        <div class="summary-row total">
+          <span>الإجمالي</span>
+          <span class="val-accent" id="summaryTotal">1 $</span>
+        </div>
+      </div>
+      <button class="btn-subscribe" id="btnSubmit" onclick="handleSubmit()">
+        <span><i class="fa-solid fa-paper-plane"></i></span>
+        إرسال طلب الاشتراك
+      </button>
+    </div>
+
+    <div class="section-order-created" id="sectionOrderCreated">
+      <div class="pay-summary">
+        <div class="summary-row">
+          <span>الخطة</span>
+          <span class="val-accent" id="confirmedPlan">—</span>
+        </div>
+        <div class="summary-row">
+          <span>البريد الإلكتروني</span>
+          <span id="confirmedEmail" style="color:var(--text); direction:ltr; unicode-bidi:plaintext;">—</span>
+        </div>
+        <div class="summary-row total">
+          <span>المبلغ الإجمالي</span>
+          <span class="val-accent" id="confirmedTotal">—</span>
+        </div>
+      </div>
+
+      <div class="wa-card">
+        <div class="wa-head">
+          <div class="wa-head-icon"><i class="fa-brands fa-whatsapp"></i></div>
+          <div class="wa-head-text">
+            <h3>الدفع عبر واتساب</h3>
+            <p>تواصل معنا وسيتم تفعيل اشتراكك فور استلام الدفع</p>
+          </div>
+        </div>
+        <div class="order-display" id="orderDisplay">
+          <div>
+            <div class="order-label">رقم الطلب</div>
+            <div class="order-id-val" id="orderIdDisplay">—</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="status-pending"><span class="status-dot"></span> معلق</span>
+            <button class="order-copy" onclick="copyOrderId()">نسخ</button>
+          </div>
+        </div>
+        <div class="wa-steps">
+          <div class="wa-step">
+            <div class="step-num">1</div>
+            <div class="step-text">اضغط على زر <strong>تواصل معنا عبر واتساب</strong> — الرسالة ستكون جاهزة تلقائياً</div>
+          </div>
+          <div class="wa-step">
+            <div class="step-num">2</div>
+            <div class="step-text">أرسل الرسالة وانتظر ردنا — سنرسل لك تفاصيل الدفع وطريقة التحويل</div>
+          </div>
+          <div class="wa-step">
+            <div class="step-num">3</div>
+            <div class="step-text">بعد التأكيد سيتم تفعيل خطة <span class="highlight" id="stepPlanLabel">المبتدئ</span> مباشرةً على بريدك</div>
+          </div>
+        </div>
+        <div class="wa-msg-preview">
+          <div class="wa-msg-label"><i class="fa-solid fa-note-sticky"></i> نص الرسالة الجاهزة</div>
+          <div class="wa-msg-body" id="waMessagePreview">
+السلام عليكم،
+أريد الاشتراك في خطة <span id="msgPlan">—</span>
+المبلغ: <span id="msgPrice">—</span> — <span id="msgComparisons">—</span> مقارنة صوتية
+الإيميل: <span id="msgEmail">—</span>
+رقم الطلب: <span class="order-span" id="msgOrderId">—</span>
+          </div>
+        </div>
+        <a class="btn-wa" id="btnWhatsApp" href="#" target="_blank">
+          <span style="font-size:22px"><i class="fa-brands fa-whatsapp"></i></span>
+          تواصل معنا عبر واتساب
+        </a>
+        <div class="wa-footer">
+          <div class="wa-footer-dot"></div>
+          نرد عادةً خلال أقل من ساعة في أوقات الدوام
+        </div>
+      </div>
+
+      <button onclick="resetForm()" style="background:none;border:none;color:var(--text3);font-family:'Tajawal',sans-serif;font-size:0.82rem;cursor:pointer;text-align:center;padding:4px;text-decoration:underline;">
+        تغيير الخطة
+      </button>
+    </div>
+
+    <div class="section-free-auth" id="sectionFreeAuth">
+      <div class="login-banner" style="background:rgba(0,229,176,0.07);border-color:rgba(0,229,176,0.25);color:var(--free);">
+        <span>🎁</span>
+        <span>سجّل دخولك لتفعيل خطتك المجانية — <a href="/login" style="color:var(--free2);">تسجيل الدخول</a></span>
+      </div>
+      <div class="auth-buttons-group">
+        <a class="btn-login" href="#" id="btnGoogleLoginFree">
+          <svg class="g-logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+          </svg>
+          المتابعة بحساب Google
+        </a>
+        <div class="or-sep">
+          <div class="or-line"></div>
+          <span class="or-text">أو</span>
+          <div class="or-line"></div>
+        </div>
+        <a class="btn-login-tiktok" href="#" id="btnTiktokLoginFree">
+          <svg class="tiktok-logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16.6 5.82c-.9-.98-1.4-2.26-1.4-3.62h-3.14v13.44c0 1.62-1.32 2.94-2.94 2.94a2.94 2.94 0 0 1-2.94-2.94 2.94 2.94 0 0 1 2.94-2.94c.3 0 .59.05.87.13V9.66a6.1 6.1 0 0 0-.87-.06A6.1 6.1 0 0 0 3.1 15.7a6.1 6.1 0 0 0 6.02 6.1 6.1 6.1 0 0 0 6.1-6.1V9.03a9.3 9.3 0 0 0 5.4 1.72V7.6a5.4 5.4 0 0 1-3.02-.78 5.5 5.5 0 0 1-1-1z" fill="#ffffff"/>
+          </svg>
+          المتابعة بحساب TikTok
+        </a>
+      </div>
+      <p class="not-auth-note">سيتم توجيهك لتسجيل الدخول ثم تفعيل خطتك المجانية تلقائياً</p>
+    </div>
+
+    <div class="section-free-success" id="sectionFreeSuccess">
+      <div class="free-success-card">
+        <div class="free-success-icon"> <i class="fa-solid fa-circle-check"></i></div>
+        <div class="free-success-title">تم تفعيل خطتك المجانية!</div>
+        <a href="/" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;margin-top:6px;padding:13px 28px;background:linear-gradient(135deg,var(--free),#00b890);border-radius:11px;font-family:'Tajawal',sans-serif;font-size:0.95rem;font-weight:700;color:#061a14;text-decoration:none;box-shadow:0 0 20px rgba(0,229,176,0.3);transition:all 0.2s;">
+          <i class="fa-solid fa-microphone"></i>
+          ابدأ مقارنتك الآن
+        </a>
+      </div>
+      <button onclick="resetForm()" style="background:none;border:none;color:var(--text3);font-family:'Tajawal',sans-serif;font-size:0.82rem;cursor:pointer;text-align:center;padding:4px;text-decoration:underline;">
+        العودة للخطط
+      </button>
+    </div>
+
+  </div>
+</main>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <div class="loading-text">جارٍ إنشاء طلبك...</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<footer class="footer">
+  <div class="footer-content">
+    <span class="footer-copy"><i class="fa-solid fa-copyright"></i> 2026 LIKETWIN</span>
+    <a href="/privacy" class="footer-link">سياسة الخصوصية</a>
+    <span class="footer-sep">|</span>
+    <a href="https://wa.me/212603074384" target="_blank" class="footer-wa">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="#25d366">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+        <path d="M12 0C5.373 0 0 5.373 0 12c0 2.134.559 4.133 1.535 5.866L.057 23.272a.5.5 0 0 0 .671.637l5.596-1.795A11.938 11.938 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.8 9.8 0 0 1-4.98-1.356l-.357-.212-3.7 1.187 1.163-3.596-.232-.369A9.793 9.793 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/>
+      </svg>
+      تواصل
+    </a>
+  </div>
+</footer>
+
+<script src="config.js"></script>
+<script>
+const PHONE = '2120603074384';
+
+const PLAN_DISPLAY = {
+  starter:  { label: 'المبتدئ',   price: 1,  comparisons: 5 },
+  pro:      { label: 'الاحترافي', price: 5,  comparisons: 50 },
+  advanced: { label: 'المتقدم',   price: 10, comparisons: 130 },
+  free:     { label: 'المجاني',   price: 0,  comparisons: 1 },
+};
+
+let selectedPlanKey = 'starter';
+let currentOrderId  = null;
+let payMode = 'paid';
+let freeActivated = false;
+
+// ✅ روابط OAuth تُبنى ديناميكياً نحو دومين الـ API
+document.getElementById('btnGoogleLoginNotAuth').href = `${CONFIG.API}/auth/google`;
+document.getElementById('btnTiktokLoginNotAuth').href = `${CONFIG.API}/auth/tiktok`;
+document.getElementById('btnGoogleLoginFree').href     = `${CONFIG.API}/auth/google`;
+document.getElementById('btnTiktokLoginFree').href     = `${CONFIG.API}/auth/tiktok`;
+
+let _currentUser = null; // { email, name }
+
+async function loadCurrentUser() {
+  try {
+    const res = await fetch(`${CONFIG.API}/get_user_info`, { credentials: 'include' });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.status === 'ok' && data.user) {
+      _currentUser = { email: data.user.email, name: data.user.name || '' };
+    }
+  } catch { _currentUser = null; }
+}
+
+// ✅ جديد: جلب حالة العرض المجاني من الباك إند (sold_out / user_has_free)
+// ضروري لأن الباك إند الجديد لم يعد يبني هذا فـ HTML من طرف السيرفر
+async function loadPricingStatus() {
+  try {
+    const res = await fetch(`${CONFIG.API}/pricing_status`, { credentials: 'include' });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.status !== 'ok') return;
+
+    if (data.sold_out) {
+      activateSoldOutUI();
+    }
+    if (data.user_has_free) {
+      setFreeBtnActivated();
+    }
+  } catch { /* نتجاهل — الحالة الافتراضية (متاح) تبقى كما هي */ }
+}
+
+function getUserEmail() { return _currentUser ? _currentUser.email : null; }
+function getUserName()  { return _currentUser ? _currentUser.name  : null; }
+function getToken() { return null; }
+
+function scrollToPaySection() {
+  setTimeout(() => {
+    const el = document.getElementById('paySection');
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => window.scrollBy({ top: 120, behavior: 'smooth' }), 400);
+  }, 80);
+}
+
+function setFreeBtnActivated() {
+  freeActivated = true;
+  const freeBtn = document.getElementById('free-plan-btn');
+  if (!freeBtn) return;
+  freeBtn.classList.add('activated');
+  freeBtn.innerHTML = '<span class="check-icon"><i class="fa-solid fa-check"></i></span> تم التفعيل';
+  freeBtn.onclick = null;
+}
+
+function activateSoldOutUI() {
+  const card         = document.getElementById('freePlanCard');
+  const activeState  = document.getElementById('activeFreeState');
+  const soldOutState = document.getElementById('soldOutState');
+
+  card.classList.add('sold-out');
+  activeState.classList.add('hidden');
+  soldOutState.classList.add('visible');
+}
+
+function hideAllSections() {
+  document.getElementById('sectionNotAuth').classList.remove('visible');
+  document.getElementById('sectionNotAuth').style.display = '';
+  document.getElementById('sectionBeforeSubmit').classList.remove('hidden');
+  document.getElementById('sectionBeforeSubmit').style.display = 'none';
+  document.getElementById('sectionOrderCreated').classList.remove('visible');
+  document.getElementById('sectionFreeAuth').classList.remove('visible');
+  document.getElementById('sectionFreeSuccess').classList.remove('visible');
+}
+
+async function initPage() {
+  await loadCurrentUser();
+  await loadPricingStatus(); // ✅ يحدد حالة "نفدت الأماكن" و"مفعّل مسبقاً"
+
+  const email = getUserEmail();
+  if (!email) {
+    document.getElementById('sectionNotAuth').classList.add('visible');
+    document.getElementById('userBadge').style.display = 'none';
+  } else {
+    document.getElementById('sectionNotAuth').style.display = 'none';
+    document.getElementById('sectionBeforeSubmit').style.display = 'flex';
+    document.getElementById('userBadge').style.display = 'inline-flex';
+    document.getElementById('badgeEmail').textContent = email;
+    document.getElementById('summaryEmail').textContent = email;
+  }
+  updateSummary();
+}
+
+function selectPlan(el) {
+  payMode = 'paid';
+  document.querySelectorAll('.plan').forEach(p => p.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedPlanKey = el.dataset.plan;
+  updateSummary();
+  const email = getUserEmail();
+  hideAllSections();
+  if (!email) {
+    document.getElementById('sectionNotAuth').classList.add('visible');
+  } else {
+    document.getElementById('sectionBeforeSubmit').style.display = 'flex';
+  }
+}
+
+function updateSummary() {
+  const d = PLAN_DISPLAY[selectedPlanKey];
+  if (!d) return;
+  document.getElementById('summaryPlan').textContent  = `${d.label} — ${d.comparisons} مقارنة`;
+  document.getElementById('summaryTotal').textContent = `${d.price} $`;
+}
+
+function setLoading(on) {
+  document.getElementById('loadingOverlay').classList.toggle('visible', on);
+  const btn = document.getElementById('btnSubmit');
+  if (btn) {
+    btn.disabled = on;
+    btn.innerHTML = on
+      ? '<span><i class="fa-solid fa-spinner fa-spin"></i></span> جارٍ الإرسال...'
+      : '<span><i class="fa-solid fa-paper-plane"></i></span> إرسال طلب الاشتراك';
+  }
+}
+
+function showToast(msg, isError = false, duration = 2800) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.toggle('error', isError);
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+function handleFreeStart() {
+  if (freeActivated) return;
+
+  payMode = 'free';
+  document.querySelectorAll('.plan').forEach(p => p.classList.remove('selected'));
+  const email = getUserEmail();
+  hideAllSections();
+
+  if (!email) {
+    document.getElementById('sectionFreeAuth').classList.add('visible');
+    scrollToPaySection();
+    return;
+  }
+
+  submitFreeOrder(email);
+}
+
+async function submitFreeOrder(email) {
+  document.getElementById('loadingOverlay').classList.add('visible');
+
+  try {
+    const name = getUserName();
+    const res = await fetch(`${CONFIG.API}/create_order`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: name || email.split('@')[0],
+        plan: 'free'
+      }),
+    });
+
+    const data = await res.json();
+
+    if (res.status === 403 && data.message === 'انتهت العروض المجانية') {
+      activateSoldOutUI();
+      hideAllSections();
+      const userEmail = getUserEmail();
+      if (!userEmail) {
+        document.getElementById('sectionNotAuth').classList.add('visible');
+      } else {
+        document.getElementById('sectionBeforeSubmit').style.display = 'flex';
+      }
+      scrollToPaySection();
+      return;
+    }
+
+    if (data.status !== 'ok') {
+      throw new Error(data.message || 'خطأ غير معروف');
+    }
+
+    document.getElementById('sectionFreeSuccess').classList.add('visible');
+
+    setFreeBtnActivated();
+    showToast('تم تفعيل خطتك المجانية!');
+    scrollToPaySection();
+
+  } catch (err) {
+    showToast(err.message, true, 4000);
+    document.getElementById('sectionFreeAuth').classList.add('visible');
+    scrollToPaySection();
+  } finally {
+    document.getElementById('loadingOverlay').classList.remove('visible');
+  }
+}
+
+async function handleSubmit() {
+  const email = getUserEmail();
+  const name  = getUserName();
+
+  if (!email) {
+    showToast('⚠️ يجب تسجيل الدخول أولاً', true, 4000);
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const res = await fetch(`${CONFIG.API}/create_order`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: name || email.split('@')[0],
+        plan: selectedPlanKey
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.status !== 'ok') {
+      throw new Error(data.message || 'خطأ غير معروف');
+    }
+
+    showOrderCreated({
+      email,
+      order_id:    data.order_id,
+      label:       data.label,
+      price:       data.price,
+      comparisons: data.comparisons,
+    });
+
+  } catch (err) {
+    showToast(err.message, true, 4000);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function showOrderCreated(order) {
+  currentOrderId = order.order_id;
+  document.getElementById('sectionBeforeSubmit').classList.add('hidden');
+  document.getElementById('sectionOrderCreated').classList.add('visible');
+
+  scrollToPaySection();
+
+  document.getElementById('confirmedPlan').textContent  = `${order.label} — ${order.comparisons} مقارنة`;
+  document.getElementById('confirmedEmail').textContent = order.email;
+  document.getElementById('confirmedTotal').textContent = `${order.price} $`;
+  document.getElementById('orderIdDisplay').textContent = order.order_id;
+  document.getElementById('stepPlanLabel').textContent  = order.label;
+  document.getElementById('msgPlan').textContent        = order.label;
+  document.getElementById('msgPrice').textContent       = `${order.price} $`;
+  document.getElementById('msgComparisons').textContent = order.comparisons;
+  document.getElementById('msgEmail').textContent       = order.email;
+  document.getElementById('msgOrderId').textContent     = order.order_id;
+
+  const msg = encodeURIComponent(
+    `السلام عليكم،\nأريد الاشتراك في خطة ${order.label}\nالمبلغ: ${order.price} $ — ${order.comparisons} مقارنة صوتية\nالإيميل: ${order.email}\nرقم الطلب: ${order.order_id}`
+  );
+  document.getElementById('btnWhatsApp').href = `https://wa.me/${PHONE}?text=${msg}`;
+  showToast('✅ تم إنشاء طلبك بنجاح!');
+}
+
+function copyOrderId() {
+  if (!currentOrderId) return;
+  navigator.clipboard.writeText(currentOrderId).then(() => showToast('✅ تم نسخ رقم الطلب'));
+}
+
+function resetForm() {
+  payMode = 'paid';
+  setLoading(false);
+  currentOrderId = null;
+  hideAllSections();
+
+  const email = getUserEmail();
+  if (!email) {
+    document.getElementById('sectionNotAuth').classList.add('visible');
+  } else {
+    document.getElementById('sectionBeforeSubmit').style.display = 'flex';
+  }
+
+  document.querySelectorAll('.plan').forEach(p => p.classList.remove('selected'));
+  const starterCard = document.querySelector('.plan[data-plan="starter"]');
+  if (starterCard) starterCard.classList.add('selected');
+  selectedPlanKey = 'starter';
+  updateSummary();
+}
+
+initPage();
+</script>
+
+</body>
+</html>
