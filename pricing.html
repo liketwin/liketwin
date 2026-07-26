@@ -1267,19 +1267,19 @@ function showOrderCreated(order) {
   document.getElementById('confirmedEmailLabel').textContent = idLabel;
   document.getElementById('msgEmailLabel').textContent = msgLabel;
 
-  document.getElementById('confirmedPlan').textContent  = `${order.label} — ${order.comparisons} مقارنة`;
+  document.getElementById('confirmedPlan').textContent  = `${msgPlan} — ${order.comparisons} مقارنة`;
   document.getElementById('confirmedEmail').textContent = order.email;
   document.getElementById('confirmedTotal').textContent = `${order.price} $`;
   document.getElementById('orderIdDisplay').textContent = order.order_id;
   document.getElementById('stepPlanLabel').textContent  = order.label;
-  document.getElementById('msgPlan').textContent        = order.label;
+  document.getElementById('msgPlan').textContent        = msgPlan;
   document.getElementById('msgPrice').textContent       = `${order.price} $`;
   document.getElementById('msgComparisons').textContent = order.comparisons;
   document.getElementById('msgEmail').textContent       = order.email;
   document.getElementById('msgOrderId').textContent     = order.order_id;
 
   const msg = encodeURIComponent(
-    `السلام عليكم،\nأريد الاشتراك في خطة ${order.label}\nالمبلغ: ${order.price} $ — ${order.comparisons} مقارنة صوتية\n${msgLabel}: ${order.email}\nرقم الطلب: ${order.order_id}`
+    `السلام عليكم،\nأريد الاشتراك في خطة ${msgPlan}\nالمبلغ: ${order.price} $ — ${order.comparisons} مقارنة صوتية\n${msgLabel}: ${order.email}\nرقم الطلب: ${order.order_id}`
   );
   document.getElementById('btnWhatsApp').href = `https://wa.me/${PHONE}?text=${msg}`;
   showToast('✅ تم إنشاء طلبك بنجاح!');
