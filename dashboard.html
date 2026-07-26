@@ -486,7 +486,7 @@ body::before {
         <h1 id="welcomeTitle">مرحباً 
           <i class="fa-solid fa-face-smile"></i>
         </h1>
-        <div class="sub">بريدك: <span id="emailDisplay">—</span></div>
+        <div class="sub" id="emailSubRow">بريدك: <span id="emailDisplay">—</span></div>
       </div>
       <div id="statusPill"></div>
     </div>
@@ -578,7 +578,7 @@ body::before {
             <span class="label">الخطة الحالية</span>
             <span class="val" id="planName">—</span>
           </div>
-          <div class="info-row">
+          <div class="info-row" id="planEmailRow">
             <span class="label">البريد الإلكتروني</span>
             <span class="val accent" id="planEmail" style="direction:ltr; unicode-bidi:plaintext;">—</span>
           </div>
@@ -709,9 +709,9 @@ function renderDashboard(userData) {
   hide('loadingScreen');
   show('dashboard');
 
-  const displayLabel = getDisplayLabel();
+  const email = getUserEmail();
   const name = getUserName();
-  const displayName = name ? name.split(' ')[0] : displayLabel;
+  const displayName = name ? name.split(' ')[0] : getDisplayLabel();
 
   const titleEl = document.getElementById('welcomeTitle');
   titleEl.textContent = '';
@@ -721,8 +721,20 @@ function renderDashboard(userData) {
   titleEl.appendChild(greetSpan);
   titleEl.appendChild(smileIcon);
 
-  document.getElementById('emailDisplay').textContent = displayLabel;
-  document.getElementById('planEmail').textContent = displayLabel;
+  // ✅ نعرض سطر "بريدك" وصف البريد فقط إذا كان عندنا بريد إلكتروني حقيقي
+  // (Google) — تيك توك ما كيرجعش بريد إلكتروني، فما بغيناش نعرضو اسم
+  // المستخدم وكأنه بريد إلكتروني
+  const emailSubRow = document.getElementById('emailSubRow');
+  const planEmailRow = document.getElementById('planEmailRow');
+  if (email) {
+    emailSubRow.style.display = '';
+    document.getElementById('emailDisplay').textContent = email;
+    planEmailRow.style.display = '';
+    document.getElementById('planEmail').textContent = email;
+  } else {
+    emailSubRow.style.display = 'none';
+    planEmailRow.style.display = 'none';
+  }
 
   const plan = userData?.plan;
   const remaining = userData?.remaining ?? 0;
