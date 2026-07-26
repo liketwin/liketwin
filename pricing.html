@@ -986,7 +986,7 @@ document.getElementById('btnTiktokLoginNotAuth').href = `${CONFIG.API}/auth/tikt
 document.getElementById('btnGoogleLoginFree').href     = `${CONFIG.API}/auth/google`;
 document.getElementById('btnTiktokLoginFree').href     = `${CONFIG.API}/auth/tiktok`;
 
-let _currentUser = null; // { email, name }
+let _currentUser = null; // { user_id, email, name }
 
 async function loadCurrentUser() {
   try {
@@ -994,7 +994,7 @@ async function loadCurrentUser() {
     if (!res.ok) return;
     const data = await res.json();
     if (data.status === 'ok' && data.user) {
-      _currentUser = { email: data.user.email, name: data.user.name || '' };
+      _currentUser = { user_id: data.user.user_id, email: data.user.email, name: data.user.name || '' };
     }
   } catch { _currentUser = null; }
 }
@@ -1018,7 +1018,16 @@ async function loadPricingStatus() {
 }
 
 function getUserEmail() { return _currentUser ? _currentUser.email : null; }
+function getUserId()    { return _currentUser ? _currentUser.user_id : null; }
 function getUserName()  { return _currentUser ? _currentUser.name  : null; }
+// ✅ نص للعرض فقط: بريد إلكتروني إذا كان موجود (Google)، وإلا الاسم
+// (TikTok ما كيرجعش بريد إلكتروني نهائياً)
+function getDisplayLabel() {
+  const email = getUserEmail();
+  if (email) return email;
+  const name = getUserName();
+  return name ? name : 'مستخدم TikTok';
+}
 function getToken() { return null; }
 
 function scrollToPaySection() {
@@ -1062,16 +1071,16 @@ async function initPage() {
   await loadCurrentUser();
   await loadPricingStatus(); // ✅ يحدد حالة "نفدت الأماكن" و"مفعّل مسبقاً"
 
-  const email = getUserEmail();
-  if (!email) {
+  const userId = getUserId();
+  if (!userId) {
     document.getElementById('sectionNotAuth').classList.add('visible');
     document.getElementById('userBadge').style.display = 'none';
   } else {
     document.getElementById('sectionNotAuth').style.display = 'none';
     document.getElementById('sectionBeforeSubmit').style.display = 'flex';
     document.getElementById('userBadge').style.display = 'inline-flex';
-    document.getElementById('badgeEmail').textContent = email;
-    document.getElementById('summaryEmail').textContent = email;
+    document.getElementById('badgeEmail').textContent = getDisplayLabel();
+    document.getElementById('summaryEmail').textContent = getDisplayLabel();
   }
   updateSummary();
 }
@@ -1082,9 +1091,9 @@ function selectPlan(el) {
   el.classList.add('selected');
   selectedPlanKey = el.dataset.plan;
   updateSummary();
-  const email = getUserEmail();
+  const userId = getUserId();
   hideAllSections();
-  if (!email) {
+  if (!userId) {
     document.getElementById('sectionNotAuth').classList.add('visible');
   } else {
     document.getElementById('sectionBeforeSubmit').style.display = 'flex';
@@ -1122,19 +1131,19 @@ function handleFreeStart() {
 
   payMode = 'free';
   document.querySelectorAll('.plan').forEach(p => p.classList.remove('selected'));
-  const email = getUserEmail();
+  const userId = getUserId();
   hideAllSections();
 
-  if (!email) {
+  if (!userId) {
     document.getElementById('sectionFreeAuth').classList.add('visible');
     scrollToPaySection();
     return;
   }
 
-  submitFreeOrder(email);
+  submitFreeOrder();
 }
 
-async function submitFreeOrder(email) {
+async function submitFreeOrder() {
   document.getElementById('loadingOverlay').classList.add('visible');
 
   try {
@@ -1146,7 +1155,7 @@ async function submitFreeOrder(email) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        name: name || email.split('@')[0],
+        name: name || getDisplayLabel(),
         plan: 'free'
       }),
     });
@@ -1156,8 +1165,8 @@ async function submitFreeOrder(email) {
     if (res.status === 403 && data.message === 'انتهت العروض المجانية') {
       activateSoldOutUI();
       hideAllSections();
-      const userEmail = getUserEmail();
-      if (!userEmail) {
+      const userId = getUserId();
+      if (!userId) {
         document.getElementById('sectionNotAuth').classList.add('visible');
       } else {
         document.getElementById('sectionBeforeSubmit').style.display = 'flex';
@@ -1186,10 +1195,10 @@ async function submitFreeOrder(email) {
 }
 
 async function handleSubmit() {
-  const email = getUserEmail();
-  const name  = getUserName();
+  const userId = getUserId();
+  const name   = getUserName();
 
-  if (!email) {
+  if (!userId) {
     showToast('⚠️ يجب تسجيل الدخول أولاً', true, 4000);
     return;
   }
@@ -1204,7 +1213,7 @@ async function handleSubmit() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        name: name || email.split('@')[0],
+        name: name || getDisplayLabel(),
         plan: selectedPlanKey
       }),
     });
@@ -1216,7 +1225,7 @@ async function handleSubmit() {
     }
 
     showOrderCreated({
-      email,
+      email:       getDisplayLabel(),
       order_id:    data.order_id,
       label:       data.label,
       price:       data.price,
@@ -1266,8 +1275,8 @@ function resetForm() {
   currentOrderId = null;
   hideAllSections();
 
-  const email = getUserEmail();
-  if (!email) {
+  const userId = getUserId();
+  if (!userId) {
     document.getElementById('sectionNotAuth').classList.add('visible');
   } else {
     document.getElementById('sectionBeforeSubmit').style.display = 'flex';
