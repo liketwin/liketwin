@@ -827,7 +827,7 @@ body::before {
           <span class="val-accent" id="confirmedPlan">—</span>
         </div>
         <div class="summary-row">
-          <span>البريد الإلكتروني</span>
+          <span id="confirmedEmailLabel">البريد الإلكتروني</span>
           <span id="confirmedEmail" style="color:var(--text); direction:ltr; unicode-bidi:plaintext;">—</span>
         </div>
         <div class="summary-row total">
@@ -865,7 +865,7 @@ body::before {
           </div>
           <div class="wa-step">
             <div class="step-num">3</div>
-            <div class="step-text">بعد التأكيد سيتم تفعيل خطة <span class="highlight" id="stepPlanLabel">المبتدئ</span> مباشرةً على بريدك</div>
+            <div class="step-text">بعد التأكيد سيتم تفعيل خطة <span class="highlight" id="stepPlanLabel">المبتدئ</span> مباشرةً على حسابك</div>
           </div>
         </div>
         <div class="wa-msg-preview">
@@ -874,7 +874,7 @@ body::before {
 السلام عليكم،
 أريد الاشتراك في خطة <span id="msgPlan">—</span>
 المبلغ: <span id="msgPrice">—</span> — <span id="msgComparisons">—</span> مقارنة صوتية
-الإيميل: <span id="msgEmail">—</span>
+<span id="msgEmailLabel">الإيميل</span>: <span id="msgEmail">—</span>
 رقم الطلب: <span class="order-span" id="msgOrderId">—</span>
           </div>
         </div>
@@ -1246,6 +1246,15 @@ function showOrderCreated(order) {
 
   scrollToPaySection();
 
+  // ✅ إذا كان عندنا بريد إلكتروني حقيقي (Google) نعرض "البريد الإلكتروني" /
+  // "الإيميل"، وإلا (TikTok، بلا بريد) نعرض "الاسم" بدلها بنفس القيمة
+  // (اسم المستخدم على TikTok) — باش الرسالة لواتساب تبقى منطقية
+  const hasEmail = !!getUserEmail();
+  const idLabel = hasEmail ? 'البريد الإلكتروني' : 'الاسم';
+  const msgLabel = hasEmail ? 'الإيميل' : 'الاسم';
+  document.getElementById('confirmedEmailLabel').textContent = idLabel;
+  document.getElementById('msgEmailLabel').textContent = msgLabel;
+
   document.getElementById('confirmedPlan').textContent  = `${order.label} — ${order.comparisons} مقارنة`;
   document.getElementById('confirmedEmail').textContent = order.email;
   document.getElementById('confirmedTotal').textContent = `${order.price} $`;
@@ -1258,7 +1267,7 @@ function showOrderCreated(order) {
   document.getElementById('msgOrderId').textContent     = order.order_id;
 
   const msg = encodeURIComponent(
-    `السلام عليكم،\nأريد الاشتراك في خطة ${order.label}\nالمبلغ: ${order.price} $ — ${order.comparisons} مقارنة صوتية\nالإيميل: ${order.email}\nرقم الطلب: ${order.order_id}`
+    `السلام عليكم،\nأريد الاشتراك في خطة ${order.label}\nالمبلغ: ${order.price} $ — ${order.comparisons} مقارنة صوتية\n${msgLabel}: ${order.email}\nرقم الطلب: ${order.order_id}`
   );
   document.getElementById('btnWhatsApp').href = `https://wa.me/${PHONE}?text=${msg}`;
   showToast('✅ تم إنشاء طلبك بنجاح!');
