@@ -72,8 +72,10 @@ body::before {
   padding: 8px 14px; border: 1px solid var(--border); border-radius: 9px;
   color: var(--accent2); text-decoration: none; font-size: 0.85rem; font-weight: 700;
   transition: all 0.2s;
-  order: -1;
-  margin-left: auto;
+  /* الحاوية RTL، فبداية المحور (order الأصغر) تكون في أقصى اليمين.
+     نعطيه order أكبر من البقية ليُدفع بصرياً لأقصى اليسار،
+     رغم بقائه أول عنصر في كود HTML. */
+  order: 10;
 }
 .back-btn:hover { background: rgba(79,142,247,0.08); }
 .btn-logout {
@@ -415,7 +417,6 @@ body::before {
     <span class="logo-name">LIKETWIN</span>
   </a>
   <nav class="nav-links">
-    
     <a class="back-btn" href="/"><i class="fa-solid fa-arrow-left"></i> العودة</a>
     <a class="nav-link" href="/pricing">الاشتراك</a>
     <!-- <a class="nav-link active" href="/dashboard">لوحتي</a> -->
