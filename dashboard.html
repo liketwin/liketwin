@@ -82,6 +82,9 @@ body::before {
   padding: 8px 14px; background: rgba(245,101,101,0.08); border: 1px solid rgba(245,101,101,0.2);
   border-radius: 9px; color: var(--error); font-family: 'Tajawal', sans-serif;
   font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+  /* أصغر order = أول عنصر في تدفق RTL = أقصى اليمين، بجانب الشعار مباشرة،
+     بعيداً عن المنتصف حيث كان محشوراً بين زر العودة وزر الاشتراك. */
+  order: -10;
 }
 .btn-logout:hover { background: rgba(245,101,101,0.15); border-color: rgba(245,101,101,0.4); }
 
