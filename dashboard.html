@@ -67,6 +67,15 @@ body::before {
 }
 .nav-link:hover { background: rgba(79,142,247,0.08); border-color: var(--border-h); color: var(--accent2); }
 /* .nav-link.active { background: rgba(79,142,247,0.1); border-color: rgba(79,142,247,0.3); color: var(--accent2); } */
+.back-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border: 1px solid var(--border); border-radius: 9px;
+  color: var(--accent2); text-decoration: none; font-size: 0.85rem; font-weight: 700;
+  transition: all 0.2s;
+  order: -1;
+  margin-left: auto;
+}
+.back-btn:hover { background: rgba(79,142,247,0.08); }
 .btn-logout {
   padding: 8px 14px; background: rgba(245,101,101,0.08); border: 1px solid rgba(245,101,101,0.2);
   border-radius: 9px; color: var(--error); font-family: 'Tajawal', sans-serif;
@@ -406,7 +415,7 @@ body::before {
     <span class="logo-name">LIKETWIN</span>
   </a>
   <nav class="nav-links">
-    <a class="nav-link" href="/M7">الرئيسية</a>
+    <a class="back-btn" href="/"><i class="fa-solid fa-arrow-left"></i> العودة</a>
     <a class="nav-link" href="/pricing">الاشتراك</a>
     <!-- <a class="nav-link active" href="/dashboard">لوحتي</a> -->
     <button class="btn-logout" onclick="handleLogout()">خروج</button>
