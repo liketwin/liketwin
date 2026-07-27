@@ -77,6 +77,8 @@ body::before {
 }
 .nav-link:hover { background: rgba(79,142,247,0.08); border-color: var(--border-h); color: var(--accent2); }
 .nav-link.active { background: rgba(79,142,247,0.1); border-color: rgba(79,142,247,0.3); color: var(--accent2); }
+.back-btn { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1px solid var(--border); border-radius: 9px; color: var(--accent2); text-decoration: none; font-size: 0.85rem; font-weight: 700; transition: all 0.2s; }
+.back-btn:hover { background: rgba(79,142,247,0.08); }
 
 .main {
   position: relative; z-index: 1; flex: 1;
@@ -645,8 +647,8 @@ body::before {
     <span class="logo-name">LIKETWIN</span>
   </a>
   <nav class="nav-links">
-    <a class="nav-link" href="/">الرئيسية</a>
-    <a class="nav-link active" id="pricingNavLink" href="/pricing">الاشتراك</a>
+    <a href="/dashboard" class="nav-link dash" id="navDashboard"><i class="fa-solid fa-gauge"></i> لوحتي</a>
+    <a class="back-btn" href="/"><i class="fa-solid fa-arrow-left"></i> العودة</a>
   </nav>
 </header>
 
