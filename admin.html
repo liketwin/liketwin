@@ -990,8 +990,8 @@ function renderUsersTable() {
         </td>
         <td><div class="actions">
           <button class="btn-action btn-edit-user" onclick='openUserModal(${JSON.stringify(u)})'>⚙️ تعديل</button>
-          <button class="btn-action btn-add-credits" onclick='quickAddCredits("${esc(u.email)}",10)'>+10</button>
-          ${rem===0&&u.plan?`<button class="btn-action btn-reset-user" onclick='if(confirm("إعادة تعيين؟"))resetUserByEmail("${esc(u.email)}")'>إعادة تعيين</button>`:''}
+          <button class="btn-action btn-add-credits" onclick='quickAddCredits("${esc(u.account_email || u.email || "")}",10)'>+10</button>
+          ${rem===0&&u.plan?`<button class="btn-action btn-reset-user" onclick='if(confirm("إعادة تعيين؟"))resetUserByEmail("${esc(u.account_email || u.email || "")}")'>إعادة تعيين</button>`:''}
         </div></td>
       </tr>`;
     }).join('');
