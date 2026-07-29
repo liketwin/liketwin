@@ -881,7 +881,7 @@ function renderOrdersTable() {
       <tr>
         <td><span class="order-id-cell">${o.id}</span></td>
         <td><span class="name-cell">${esc(o.name)}</span></td>
-        <td><span class="email-cell">${esc(o.email)}</span></td>
+        <td><span class="email-cell">${esc(o.account_email || o.email || "")}</span></td>
         <td>${planBadge(o.plan,o.label)}</td>
         <td><span class="price-cell">${o.price} $</span></td>
         <td>${statusBadge(o.status)}</td>
@@ -938,7 +938,10 @@ function applyUserFilters() {
   const cr = document.getElementById('filterUserCredits').value;
 
   filteredUsers = allUsers.filter(u => {
-    if (q && !u.email.toLowerCase().includes(q)) return false;
+    const email = (u.account_email || u.email || "").toLowerCase();
+    
+if (q && !email.includes(q)) return false;
+    
     if (p === 'none' && u.plan) return false;
     if (p && p !== 'none' && u.plan !== p) return false;
     if (cr) {
@@ -974,7 +977,7 @@ function renderUsersTable() {
       const barCls = rem===0?'empty':pct<20?'low':'';
       const numCls = rem===0?'empty':pct<20?'low':'good';
       return `<tr>
-        <td><span class="email-cell">${esc(u.email)}</span></td>
+        <td><span class="email-cell">${esc(u.account_email || u.email || "")}</span></td>
         <td>${u.plan ? planBadge(u.plan, pd?pd.label:u.plan) : '<span class="plan-badge plan-none">بدون خطة</span>'}</td>
         <td style="color:var(--gold2);font-weight:700;">${ttl || '—'}</td>
         <td style="color:var(--warn);font-weight:700;">${pd ? used : '—'}</td>
