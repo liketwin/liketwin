@@ -294,30 +294,18 @@ html.auth-in #termsNote { display: none; }
 
 .g-logo, .fb-logo, .tg-logo, .gh-logo { width: 21px; height: 21px; flex-shrink: 0; }
 
-/* ✅ حاوية Telegram Login Widget — لضمان محاذاتها في المنتصف بنفس عرض بقية الأزرار
-   ✅ ارتفاع ثابت مسبقاً (نفس ارتفاع أزرار Google/GitHub تقريباً) لمنع أي
-   قفزة في التخطيط (layout shift) أثناء انتظار تحميل الويدجت من Telegram */
-#tgLoginWrap { display: flex; justify-content: center; align-items: center; width: 100%; min-height: 44px; position: relative; }
-
-/* ✅ هيكل عظمي (skeleton) بلون تيليغرام يظهر فوراً بدل الفراغ، ثم يختفي
-   بمجرد جهوزية الويدجت الحقيقي — هكذا لا يظهر "وميض" فارغ عند إعادة التحميل */
-.tg-skeleton {
-  width: 100%;
-  height: 40px;
-  border-radius: 12px;
-  background: linear-gradient(90deg, rgba(38,165,228,0.14) 25%, rgba(38,165,228,0.28) 37%, rgba(38,165,228,0.14) 63%);
-  background-size: 400% 100%;
-  animation: tgSkeletonPulse 1.4s ease infinite;
+/* ✅ حاوية Telegram Login Widget — نفس عرض وارتفاع أزرار Google/GitHub بالضبط */
+#tgLoginWrap { width: 100%; }
+#telegramLoginContainer { width: 100%; }
+/* ✅ نفرض على iframe الويدجت نفس الأبعاد الخارجية لبقية الأزرار — هذا مسموح
+   لأن العرض/الارتفاع خاصيتان للإطار الخارجي (تتحكم بها صفحتنا)، بخلاف
+   محتوى الإطار الداخلي (تحكم Telegram به فقط) */
+#telegramLoginContainer iframe {
+  width: 100% !important;
+  height: 44px !important;
+  border-radius: 12px !important;
+  border: none !important;
 }
-@keyframes tgSkeletonPulse {
-  0%   { background-position: 100% 50%; }
-  100% { background-position: 0 50%; }
-}
-
-/* ✅ حاوية الويدجت الحقيقي تبدأ شفافة وتظهر تدريجياً (fade-in) بعد التحميل
-   بدل الظهور المفاجئ الذي كان يبدو كـ"قفزة" في الواجهة */
-#telegramLoginContainer { width: 100%; display: flex; justify-content: center; opacity: 0; transition: opacity 0.25s ease; }
-#telegramLoginContainer.ready { opacity: 1; }
 
 .secure-note {
   display: flex;
@@ -704,7 +692,6 @@ audio { display: block; width: 100%; margin-top: 4px; }
              لا يوجد href يدوي هنا؛ الويدجت يُبنى بالكامل عبر initTelegramLoginWidget()
              بعد جلب bot_username من GET /auth/telegram/config -->
         <div id="tgLoginWrap">
-          <div class="tg-skeleton" id="tgSkeleton"></div>
           <div id="telegramLoginContainer"></div>
         </div>
 
@@ -969,13 +956,7 @@ document.getElementById('btnGithubLogin').href = `${CONFIG.API}/auth/github`;
 ══════════════════════════════════════ */
 async function initTelegramLoginWidget() {
   const container = document.getElementById('telegramLoginContainer');
-  const skeleton  = document.getElementById('tgSkeleton');
   if (!container) return;
-
-  // ✅ في حال فشل كل شيء (شبكة، سكربت Telegram، إلخ) نُخفي الهيكل المؤقت
-  // بعد مهلة قصوى حتى لا يبقى الـ skeleton نابضاً إلى الأبد
-  const hideSkeleton = () => { if (skeleton) skeleton.style.display = 'none'; };
-  const safetyTimeout = setTimeout(hideSkeleton, 6000);
 
   try {
     const res = await fetch(`${CONFIG.API}/auth/telegram/config`);
@@ -984,8 +965,6 @@ async function initTelegramLoginWidget() {
 
     if (!botUsername) {
       console.warn('Telegram config: bot_username missing');
-      clearTimeout(safetyTimeout);
-      hideSkeleton();
       return;
     }
 
@@ -994,35 +973,13 @@ async function initTelegramLoginWidget() {
     script.async = true;
     script.setAttribute('data-telegram-login', botUsername);
     script.setAttribute('data-size', 'large');
-    // ✅ أقرب تخصيص متاح رسمياً من Telegram لمطابقة تصميم الموقع:
-    // نفس نصف قطر زوايا بقية الأزرار (12px)، وإخفاء صورة المستخدم الدائرية
-    // لمظهر أنظف. لون الويدجت نفسه (أزرق Telegram) لا يمكن تغييره لأن
-    // الويدجت يُعرض داخل iframe من نطاق Telegram نفسه (cross-origin) لأسباب أمنية،
-    // ولا توجد وسيلة رسمية لإعادة تلوينه بـ CSS من صفحتنا.
     script.setAttribute('data-radius', '12');
-    script.setAttribute('data-userpic', 'false');
     script.setAttribute('data-auth-url', `${CONFIG.API}/auth/telegram/callback`);
     script.setAttribute('data-request-access', 'write');
-
-    // ✅ بمجرد تحميل سكربت الويدجت (وليس انتظار أي تفاعل من المستخدم)،
-    // نُخفي الهيكل المؤقت ونُظهر الحاوية الحقيقية بانتقال ناعم (fade)
-    // بدل ظهورها المفاجئ الذي كان يبدو كقفزة في الواجهة عند إعادة التحميل
-    script.onload = () => {
-      clearTimeout(safetyTimeout);
-      hideSkeleton();
-      container.classList.add('ready');
-    };
-    script.onerror = () => {
-      clearTimeout(safetyTimeout);
-      hideSkeleton();
-      console.warn('فشل تحميل سكربت Telegram Login Widget');
-    };
 
     container.innerHTML = '';
     container.appendChild(script);
   } catch (e) {
-    clearTimeout(safetyTimeout);
-    hideSkeleton();
     console.warn('تعذر تحميل Telegram Login Widget:', e);
   }
 }
