@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Liketwin · المراقبة الحية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0a0e13;
+    --bg-raised: #10161d;
+    --bg-card: #131a22;
+    --border: #1d2731;
+    --border-soft: #17202a;
+    --text: #e7edf3;
+    --text-dim: #7c8b9a;
+    --text-faint: #4c5866;
+    --pulse: #2dd8c0;
+    --pulse-dim: rgba(45, 216, 192, 0.14);
+    --amber: #f0a94e;
+    --red: #ef5b6a;
+    --violet: #8b8cf0;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+    --sans: 'IBM Plex Sans Arabic', system-ui, sans-serif;
+  }
+
+  *{ box-sizing: border-box; }
+
+  html,body{
+    margin:0; padding:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+  }
+
+  body{
+    background-image:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(45,216,192,0.06), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 100% 0%, rgba(139,140,240,0.05), transparent 55%);
+  }
+
+  ::selection{ background: var(--pulse-dim); color: var(--text); }
+
+  /* ---------- شاشة الدخول (Token Gate) ---------- */
+  #gate{
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg);
+    z-index: 50;
+  }
+  #gate.hidden{ display:none; }
+  .gate-card{
+    width: min(420px, 90vw);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 32px 28px;
+  }
+  .gate-mark{
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: 1.5px solid var(--pulse);
+    display:flex; align-items:center; justify-content:center;
+    margin-bottom: 18px;
+  }
+  .gate-mark::before{
+    content:"";
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--pulse);
+    box-shadow: 0 0 10px 2px var(--pulse);
+  }
+  .gate-card h1{
+    font-size: 19px; margin: 0 0 6px; font-weight: 700; letter-spacing: -0.01em;
+  }
+  .gate-card p{
+    font-size: 13px; color: var(--text-dim); margin: 0 0 22px; line-height: 1.6;
+  }
+  .field{ margin-bottom: 14px; }
+  .field label{
+    display:block; font-size: 12px; color: var(--text-dim); margin-bottom: 6px;
+  }
+  .field input{
+    width: 100%;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .field input:focus{ border-color: var(--pulse); }
+  .gate-btn{
+    width: 100%;
+    background: var(--pulse);
+    color: #06231e;
+    border: none;
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 14px;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 6px;
+    transition: filter .15s, transform .1s;
+  }
+  .gate-btn:hover{ filter: brightness(1.08); }
+  .gate-btn:active{ transform: scale(0.99); }
+  .gate-err{
+    color: var(--red);
+    font-size: 12.5px;
+    margin-top: 12px;
+    display: none;
+  }
+  .gate-err.show{ display:block; }
+  .gate-remember{
+    display:flex; align-items:center; gap:8px;
+    margin-top: 16px; margin-bottom: 4px;
+  }
+  .gate-remember input{ accent-color: var(--pulse); width:14px; height:14px; }
+  .gate-remember label{ font-size: 12px; color: var(--text-dim); }
+
+  /* ---------- التخطيط الرئيسي ---------- */
+  #app{ display:none; max-width: 1080px; margin: 0 auto; padding: 28px 20px 60px; }
+  #app.show{ display:block; }
+
+  header.top{
+    display:flex; align-items:center; justify-content: space-between;
+    margin-bottom: 26px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .brand{ display:flex; align-items:center; gap: 10px; }
+  .brand-dot{
+    width:9px; height:9px; border-radius:50%;
+    background: var(--text-faint);
+    transition: background .3s, box-shadow .3s;
+  }
+  .brand-dot.live{
+    background: var(--pulse);
+    box-shadow: 0 0 8px 1px var(--pulse);
+    animation: dotPulse 2s ease-in-out infinite;
+  }
+  .brand-dot.down{ background: var(--red); box-shadow: 0 0 8px 1px var(--red); }
+  @keyframes dotPulse{ 0%,100%{ opacity:1; } 50%{ opacity:.45; } }
+  .brand h2{ font-size: 15px; margin:0; font-weight: 700; letter-spacing: 0.01em; }
+  .brand span{ font-size: 11.5px; color: var(--text-faint); font-family: var(--mono); }
+
+  .top-right{ display:flex; align-items:center; gap: 14px; }
+  .backend-chip{
+    font-family: var(--mono);
+    font-size: 10.5px;
+    padding: 4px 9px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .backend-chip.redis{ color: var(--pulse); border-color: rgba(45,216,192,0.35); }
+  .last-update{ font-family: var(--mono); font-size: 11px; color: var(--text-faint); }
+  .logout-btn{
+    background: none; border: 1px solid var(--border); color: var(--text-faint);
+    font-size: 11px; padding: 5px 10px; border-radius: 7px; cursor:pointer; font-family: var(--sans);
+  }
+  .logout-btn:hover{ color: var(--text-dim); border-color: var(--text-faint); }
+
+  /* ---------- بطاقة التحليلات النشطة (العنصر المميز) ---------- */
+  .hero{
+    position: relative;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 34px 30px;
+    margin-bottom: 22px;
+    overflow: hidden;
+    display:flex; align-items:center; justify-content: space-between; gap: 24px;
+  }
+  .hero-label{
+    font-size: 13px; color: var(--text-dim); margin: 0 0 10px;
+  }
+  .hero-num{
+    font-family: var(--mono);
+    font-size: 56px; font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+    display:flex; align-items:baseline; gap: 10px;
+  }
+  .hero-num small{ font-size: 15px; color: var(--text-faint); font-weight:500; }
+  .sonar{
+    position: relative;
+    width: 108px; height: 108px;
+    flex-shrink: 0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .sonar-ring{
+    position:absolute; border-radius:50%;
+    border: 1px solid var(--pulse);
+    opacity: 0;
+  }
+  .sonar.active .sonar-ring{ animation: sonarWave 2.4s ease-out infinite; }
+  .sonar-ring:nth-child(2){ animation-delay: .8s !important; }
+  .sonar-ring:nth-child(3){ animation-delay: 1.6s !important; }
+  @keyframes sonarWave{
+    0%{ width: 20px; height: 20px; opacity: .7; }
+    100%{ width: 108px; height: 108px; opacity: 0; }
+  }
+  .sonar-core{
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--text-faint);
+    z-index: 2;
+    transition: background .3s, box-shadow .3s;
+  }
+  .sonar.active .sonar-core{
+    background: var(--pulse);
+    box-shadow: 0 0 16px 3px var(--pulse-dim), 0 0 4px 1px var(--pulse);
+  }
+
+  /* ---------- شبكة النوافذ الزمنية ---------- */
+  .window-grid{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  @media (max-width: 720px){ .window-grid{ grid-template-columns: 1fr; } }
+
+  .window-card{
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 20px 18px;
+  }
+  .window-head{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom: 16px;
+  }
+  .window-title{ font-size: 13px; font-weight: 600; color: var(--text); }
+  .window-sub{ font-size: 10.5px; color: var(--text-faint); font-family: var(--mono); }
+
+  .window-total{
+    font-family: var(--mono); font-size: 30px; font-weight: 700;
+    margin-bottom: 14px;
+  }
+
+  .bar{
+    display:flex; height: 6px; border-radius: 4px; overflow: hidden;
+    background: var(--border-soft);
+    margin-bottom: 12px;
+  }
+  .bar-success{ background: var(--pulse); height:100%; transition: width .4s ease; }
+  .bar-failed{ background: var(--red); height:100%; transition: width .4s ease; }
+
+  .stat-row{ display:flex; justify-content: space-between; font-size: 12px; margin-top: 8px; }
+  .stat-row .k{ color: var(--text-faint); }
+  .stat-row .v{ font-family: var(--mono); color: var(--text-dim); }
+  .stat-row .v.ok{ color: var(--pulse); }
+  .stat-row .v.bad{ color: var(--red); }
+
+  /* ---------- بطاقة النظام ---------- */
+  .sys-grid{
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+  @media (max-width: 720px){ .sys-grid{ grid-template-columns: repeat(2, 1fr); } }
+
+  .sys-card{
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 18px;
+  }
+  .sys-label{ font-size: 11px; color: var(--text-faint); margin-bottom: 8px; }
+  .sys-value{ font-family: var(--mono); font-size: 22px; font-weight: 700; }
+  .sys-track{
+    height: 4px; border-radius: 3px; background: var(--border-soft);
+    margin-top: 10px; overflow: hidden;
+  }
+  .sys-fill{ height:100%; background: var(--violet); transition: width .5s ease; }
+
+  .sys-empty{
+    grid-column: 1 / -1;
+    text-align:center;
+    font-size: 12px;
+    color: var(--text-faint);
+    padding: 10px 0 2px;
+  }
+
+  .section-label{
+    font-size: 11px; color: var(--text-faint);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin: 26px 0 12px;
+  }
+
+  .toast{
+    position: fixed; bottom: 22px; right: 50%; transform: translateX(50%);
+    background: var(--red); color: #2a0d10;
+    font-size: 12.5px; font-weight: 600;
+    padding: 10px 18px; border-radius: 30px;
+    opacity: 0; pointer-events:none;
+    transition: opacity .25s;
+    font-family: var(--sans);
+    z-index: 40;
+  }
+  .toast.show{ opacity: 1; }
+
+  @media (prefers-reduced-motion: reduce){
+    .brand-dot.live, .sonar.active .sonar-ring{ animation: none; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- شاشة إدخال التوكن والرابط -->
+  <div id="gate">
+    <div class="gate-card">
+      <div class="gate-mark"></div>
+      <h1>لوحة المراقبة الحية</h1>
+      <p>هاد الصفحة كتقرا مباشرة من <code style="font-family:var(--mono); color:var(--text-dim);">/admin/live_stats</code>. دخلي رابط الـ API وتوكن الأدمن باش تبدأ.</p>
+
+      <div class="field">
+        <label>رابط الـ API</label>
+        <input id="apiBase" type="text" placeholder="https://api.liketwin.com" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>توكن الأدمن</label>
+        <input id="adminToken" type="password" placeholder="X-Admin-Token" autocomplete="off">
+      </div>
+
+      <button class="gate-btn" id="connectBtn">دخول للمراقبة</button>
+      <div class="gate-remember">
+        <input type="checkbox" id="rememberMe">
+        <label for="rememberMe">تذكرني على هاد الجهاز</label>
+      </div>
+      <div class="gate-err" id="gateErr"></div>
+    </div>
+  </div>
+
+  <!-- التطبيق الرئيسي -->
+  <div id="app">
+    <header class="top">
+      <div class="brand">
+        <span class="brand-dot" id="connDot"></span>
+        <div>
+          <h2>Liketwin · المراقبة الحية</h2>
+          <span id="apiLabel">—</span>
+        </div>
+      </div>
+      <div class="top-right">
+        <span class="backend-chip" id="backendChip">—</span>
+        <span class="last-update" id="lastUpdate">—</span>
+        <button class="logout-btn" id="logoutBtn">تسجيل خروج</button>
+      </div>
+    </header>
+
+    <!-- التحليلات النشطة الآن -->
+    <div class="hero">
+      <div>
+        <p class="hero-label">التحليلات الجارية الآن</p>
+        <div class="hero-num"><span id="activeNum">0</span><small>تحليل نشط</small></div>
+      </div>
+      <div class="sonar" id="sonar">
+        <div class="sonar-ring"></div>
+        <div class="sonar-ring"></div>
+        <div class="sonar-ring"></div>
+        <div class="sonar-core"></div>
+      </div>
+    </div>
+
+    <!-- النوافذ الزمنية -->
+    <div class="window-grid" id="windowGrid"></div>
+
+    <!-- النظام -->
+    <p class="section-label">استهلاك السيرفر</p>
+    <div class="sys-grid" id="sysGrid"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const gate = document.getElementById('gate');
+  const app = document.getElementById('app');
+  const gateErr = document.getElementById('gateErr');
+  const apiBaseInput = document.getElementById('apiBase');
+  const tokenInput = document.getElementById('adminToken');
+  const rememberMe = document.getElementById('rememberMe');
+  const toast = document.getElementById('toast');
+
+  let API_BASE = '';
+  let TOKEN = '';
+  let pollTimer = null;
+  let missedTicks = 0;
+
+  const STORAGE_KEY = 'liketwin_live_stats_creds';
+
+  function loadSaved(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return;
+      const data = JSON.parse(raw);
+      if(data.apiBase) apiBaseInput.value = data.apiBase;
+      if(data.token) tokenInput.value = data.token;
+      if(data.apiBase && data.token) rememberMe.checked = true;
+    }catch(e){ /* localStorage قد لا يكون متاحاً — تجاهل بصمت */ }
+  }
+
+  function saveCreds(){
+    if(!rememberMe.checked){
+      try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+      return;
+    }
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ apiBase: API_BASE, token: TOKEN }));
+    }catch(e){ /* تجاهل بصمت إذا التخزين غير متاح */ }
+  }
+
+  function clearCreds(){
+    try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+  }
+
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(()=> toast.classList.remove('show'), 2600);
+  }
+
+  function fmtNum(n){
+    if(n === null || n === undefined) return '—';
+    return Number(n).toLocaleString('en-US');
+  }
+
+  function windowCard(title, sub, data){
+    const total = data.total || 0;
+    const success = data.success || 0;
+    const failed = data.failed || 0;
+    const successPct = total ? (success/total*100) : 0;
+    const failedPct = total ? (failed/total*100) : 0;
+    return `
+      <div class="window-card">
+        <div class="window-head">
+          <span class="window-title">${title}</span>
+          <span class="window-sub">${sub}</span>
+        </div>
+        <div class="window-total">${fmtNum(total)}</div>
+        <div class="bar">
+          <div class="bar-success" style="width:${successPct}%"></div>
+          <div class="bar-failed" style="width:${failedPct}%"></div>
+        </div>
+        <div class="stat-row"><span class="k">ناجح</span><span class="v ok">${fmtNum(success)}</span></div>
+        <div class="stat-row"><span class="k">فاشل</span><span class="v bad">${fmtNum(failed)}</span></div>
+        <div class="stat-row"><span class="k">متوسط الوقت</span><span class="v">${data.average_time_ms ? data.average_time_ms + ' ms' : '—'}</span></div>
+      </div>
+    `;
+  }
+
+  function sysCard(label, value, pct, unit){
+    return `
+      <div class="sys-card">
+        <div class="sys-label">${label}</div>
+        <div class="sys-value">${value}${unit || ''}</div>
+        ${pct !== null ? `<div class="sys-track"><div class="sys-fill" style="width:${Math.min(100, pct)}%"></div></div>` : ''}
+      </div>
+    `;
+  }
+
+  function render(data){
+    document.getElementById('activeNum').textContent = fmtNum(data.active_analyses);
+    document.getElementById('sonar').classList.toggle('active', (data.active_analyses || 0) > 0);
+
+    const backendChip = document.getElementById('backendChip');
+    backendChip.textContent = data.backend === 'redis' ? 'Redis' : 'Memory';
+    backendChip.classList.toggle('redis', data.backend === 'redis');
+
+    document.getElementById('windowGrid').innerHTML =
+      windowCard('آخر دقيقة', '60s', data.last_minute || {}) +
+      windowCard('آخر ساعة', '3600s', data.last_hour || {}) +
+      windowCard('اليوم', 'UTC', data.today || {});
+
+    const sysGrid = document.getElementById('sysGrid');
+    if(data.system){
+      const s = data.system;
+      sysGrid.innerHTML =
+        sysCard('CPU السيرفر', s.system_cpu_percent ?? '—', s.system_cpu_percent ?? null, '%') +
+        sysCard('ذاكرة السيرفر', s.system_memory_percent ?? '—', s.system_memory_percent ?? null, '%') +
+        sysCard('CPU العملية', s.process_cpu_percent ?? '—', s.process_cpu_percent ?? null, '%') +
+        sysCard('ذاكرة العملية', s.process_memory_mb ?? '—', null, ' MB');
+    } else {
+      sysGrid.innerHTML = `<div class="sys-empty">psutil غير مثبت على السيرفر — استهلاك النظام غير متاح</div>`;
+    }
+
+    document.getElementById('lastUpdate').textContent = 'آخر تحديث: ' + new Date().toLocaleTimeString('ar-MA');
+  }
+
+  function setConnState(state){
+    // state: 'live' | 'down'
+    const dot = document.getElementById('connDot');
+    dot.classList.remove('live','down');
+    dot.classList.add(state);
+  }
+
+  async function poll(){
+    try{
+      const res = await fetch(API_BASE + '/admin/live_stats', {
+        headers: { 'X-Admin-Token': TOKEN }
+      });
+      if(res.status === 403){
+        stopPolling();
+        showAuthError('التوكن غير صحيح أو غير مصرح به');
+        return;
+      }
+      if(!res.ok){ throw new Error('HTTP ' + res.status); }
+      const json = await res.json();
+      if(json.status !== 'ok'){ throw new Error(json.message || 'خطأ غير معروف'); }
+      missedTicks = 0;
+      setConnState('live');
+      render(json);
+    }catch(e){
+      missedTicks += 1;
+      if(missedTicks >= 2){ setConnState('down'); }
+      if(missedTicks === 3){ showToast('تعذر الوصول للسيرفر — كنعاود المحاولة...'); }
+    }
+  }
+
+  function startPolling(){
+    poll();
+    pollTimer = setInterval(poll, 1500);
+  }
+
+  function stopPolling(){
+    if(pollTimer){ clearInterval(pollTimer); pollTimer = null; }
+  }
+
+  function showAuthError(msg){
+    app.classList.remove('show');
+    gate.classList.remove('hidden');
+    gateErr.textContent = msg;
+    gateErr.classList.add('show');
+    clearCreds();
+  }
+
+  function connect(){
+    const rawBase = apiBaseInput.value.trim().replace(/\/+$/,'');
+    const rawToken = tokenInput.value.trim();
+
+    if(!rawBase || !rawToken){
+      gateErr.textContent = 'خاصك تعمر رابط الـ API والتوكن';
+      gateErr.classList.add('show');
+      return;
+    }
+    if(!/^https?:\/\//i.test(rawBase)){
+      gateErr.textContent = 'رابط الـ API خاصو يبدا بـ http:// ولا https://';
+      gateErr.classList.add('show');
+      return;
+    }
+
+    API_BASE = rawBase;
+    TOKEN = rawToken;
+    gateErr.classList.remove('show');
+    document.getElementById('apiLabel').textContent = API_BASE;
+
+    saveCreds();
+
+    gate.classList.add('hidden');
+    app.classList.add('show');
+    missedTicks = 0;
+    startPolling();
+  }
+
+  document.getElementById('connectBtn').addEventListener('click', connect);
+  [apiBaseInput, tokenInput].forEach(el=>{
+    el.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') connect(); });
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', ()=>{
+    stopPolling();
+    clearCreds();
+    app.classList.remove('show');
+    gate.classList.remove('hidden');
+    gateErr.classList.remove('show');
+  });
+
+  loadSaved();
+})();
+</script>
+
+</body>
+</html>
