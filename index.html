@@ -313,8 +313,11 @@ html.auth-in #termsNote { display: none; }
    — لا نُجبر العرض على 100% لأن محتوى الويدجت الداخلي من Telegram
    لا يتمدد مع الحاوية، فكان يظهر بحجمه الطبيعي وسط مساحة فارغة
    كبيرة، ما يجعله يبدو أصغر بدل أن يبدو أكبر */
+/* ✅ الارتفاع لا يُثبَّت هنا بقيمة ثابتة، لأن ارتفاع أزرار Google/GitHub
+   متغيّر حسب الشاشة (clamp في CSS) — بدل ذلك نقيس الارتفاع الفعلي
+   لزر Google بالجافاسكريبت (syncTelegramButtonHeight) ونطبّقه حرفياً
+   على iframe تيليغرام، فيتطابقان بكسل بكسل على أي جهاز */
 #telegramLoginContainer iframe {
-  height: 44px !important;
   border-radius: 12px !important;
   border: none !important;
 }
@@ -964,6 +967,17 @@ document.getElementById('btnGithubLogin').href = `${CONFIG.API}/auth/github`;
    الموجودة أعلاه — فتلتقطها pickUpTokenFromHash() تلقائياً
    دون أي تعديل إضافي.
 ══════════════════════════════════════ */
+/* ✅ نقيس الارتفاع الفعلي لزر Google المعروض على هذا الجهاز بالذات،
+   ونطبّقه حرفياً على iframe تيليغرام، لأن ارتفاع الأزرار الأخرى
+   متغيّر (clamp حسب الشاشة) ولا يمكن تخمينه بقيمة CSS ثابتة */
+function syncTelegramButtonHeight() {
+  const ref = document.getElementById('btnGoogleLogin');
+  const iframe = document.querySelector('#telegramLoginContainer iframe');
+  if (!ref || !iframe) return;
+  const h = ref.getBoundingClientRect().height;
+  if (h > 0) iframe.style.height = h + 'px';
+}
+
 async function initTelegramLoginWidget() {
   const container = document.getElementById('telegramLoginContainer');
   if (!container) return;
@@ -991,6 +1005,19 @@ async function initTelegramLoginWidget() {
 
     container.innerHTML = '';
     container.appendChild(script);
+
+    // ✅ نطابق الارتفاع بمجرد ظهور iframe فعلياً في الصفحة (وليس فقط
+    // بعد تحميل السكربت، لأن Telegram يُنشئ الـ iframe بعد ذلك بلحظة)
+    const heightObserver = new MutationObserver(() => {
+      if (document.querySelector('#telegramLoginContainer iframe')) {
+        syncTelegramButtonHeight();
+        heightObserver.disconnect();
+      }
+    });
+    heightObserver.observe(container, { childList: true });
+
+    // ✅ إعادة المطابقة عند تغيير حجم الشاشة (clamp يتغيّر مع الشاشة)
+    window.addEventListener('resize', syncTelegramButtonHeight);
   } catch (e) {
     console.warn('تعذر تحميل Telegram Login Widget:', e);
   }
