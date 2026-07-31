@@ -3,6 +3,22 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- ✅ نُحمّل config.js كأول شيء في <head>، قبل أي رابط CSS خارجي.
+     المتصفح يُجبر أي <script> عادي على انتظار كل stylesheet خارجي
+     يسبقه في الصفحة قبل تنفيذه — لو بقي config.js بعد روابط الخطوط
+     وFont Awesome، سينتظر تحميلها بالكامل أولاً رغم عدم علاقته بها،
+     وهذا كان السبب الحقيقي وراء تأخر ظهور زر Telegram. -->
+<script src="config.js"></script>
+<script>
+  // ✅ نبدأ طلب إعدادات Telegram فوراً بمجرد توفر CONFIG، بالتوازي مع
+  // تحميل باقي الصفحة (خطوط، أيقونات، CSS)، بدل انتظار وصول المتصفح
+  // لأسفل body أو انتظار اكتمال تحميل أي CSS خارجي
+  window.__tgConfigPromise = (typeof CONFIG !== 'undefined' && CONFIG.API)
+    ? fetch(`${CONFIG.API}/auth/telegram/config`).then(r => r.json()).catch(() => null)
+    : Promise.resolve(null);
+</script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-19Q0B48Y2B"></script>
 <script>
@@ -12,8 +28,6 @@
 
   gtag('config', 'G-19Q0B48Y2B');
 </script>   
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LIKETWIN — هل صوتك يشبه أحد كبار القرّاء؟</title>
 <link rel="icon" type="image/png" href="/favicon.png">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -21,18 +35,6 @@
 <!-- ✅ preconnect لدومين Telegram لتسريع تحميل سكربت الويدجت وتقليل زمن الظهور -->
 <link rel="preconnect" href="https://telegram.org">
 <link rel="dns-prefetch" href="https://telegram.org">
-<!-- ✅ نُحمّل config.js هنا في <head> (وليس في آخر الصفحة كما كان سابقاً)
-     لأن CONFIG.API ضروري لبدء جلب إعدادات Telegram في أقرب وقت ممكن.
-     هذا هو السبب الحقيقي للتأخير الذي كان يظهر عند إعادة التحميل —
-     الويدجت كان ينتظر حتى نهاية الصفحة قبل أن يبدأ حتى في التحرك. -->
-<script src="config.js"></script>
-<script>
-  // ✅ نبدأ طلب إعدادات Telegram فوراً بمجرد توفر CONFIG، بالتوازي مع
-  // تحميل باقي الصفحة، بدل انتظار وصول المتصفح لأسفل body
-  window.__tgConfigPromise = (typeof CONFIG !== 'undefined' && CONFIG.API)
-    ? fetch(`${CONFIG.API}/auth/telegram/config`).then(r => r.json()).catch(() => null)
-    : Promise.resolve(null);
-</script>
 <script>
 /* ✅ يُنفَّذ فوراً قبل رسم الصفحة — يمنع ظهور زر Google للحظة عند إعادة التحميل
    لمستخدم مسجّل الدخول مسبقاً، عبر قراءة آخر حالة معروفة من localStorage. */
@@ -968,19 +970,37 @@ document.getElementById('btnGithubLogin').href = `${CONFIG.API}/auth/github`;
    دون أي تعديل إضافي.
 ══════════════════════════════════════ */
 /* ✅ نقيس الارتفاع الفعلي لزر Google المعروض على هذا الجهاز بالذات،
-   ونطبّقه حرفياً على iframe تيليغرام، لأن ارتفاع الأزرار الأخرى
-   متغيّر (clamp حسب الشاشة) ولا يمكن تخمينه بقيمة CSS ثابتة */
+   ونحقنه كقاعدة CSS بـ !important في <style> منفصلة. هذا (وليس
+   iframe.style.height مباشرة) هو ما يضمن ثبات النتيجة: سكربت Telegram
+   الداخلي يُعيد ضبط ارتفاع الـ iframe بنفسه (inline style عادي) بعد
+   لحظات من إدراجه، وأي محاولة سابقة كانت تُهزَم بهذا التصرف. قاعدة
+   CSS بـ !important تتغلب دائماً على inline style عادي بغض النظر عن
+   توقيت تنفيذ كل منهما، فتبقى النتيجة ثابتة مهما فعل سكربت Telegram لاحقاً */
 function syncTelegramButtonHeight() {
   const ref = document.getElementById('btnGoogleLogin');
-  const iframe = document.querySelector('#telegramLoginContainer iframe');
-  if (!ref || !iframe) return;
+  if (!ref) return;
   const h = ref.getBoundingClientRect().height;
-  if (h > 0) iframe.style.height = h + 'px';
+  if (h <= 0) return;
+
+  let styleTag = document.getElementById('tgHeightOverride');
+  if (!styleTag) {
+    styleTag = document.createElement('style');
+    styleTag.id = 'tgHeightOverride';
+    document.head.appendChild(styleTag);
+  }
+  styleTag.textContent = `#telegramLoginContainer iframe { height: ${h}px !important; }`;
 }
 
 async function initTelegramLoginWidget() {
   const container = document.getElementById('telegramLoginContainer');
   if (!container) return;
+
+  // ✅ نحقن قاعدة الارتفاع فوراً — قبل حتى وصول رد الباك إند أو تحميل
+  // سكربت Telegram — لأن زر Google موجود ومرسوم أصلاً في الصفحة.
+  // هكذا تكون القاعدة جاهزة ومنتظرة الـ iframe بمجرد ظهوره، بلا أي
+  // فحص توقيت أو مراقبة إضافية
+  syncTelegramButtonHeight();
+  window.addEventListener('resize', syncTelegramButtonHeight);
 
   try {
     // ✅ نستخدم الطلب الذي بدأ مسبقاً في <head> (أعلى الصفحة) بدل بدء
@@ -1005,19 +1025,6 @@ async function initTelegramLoginWidget() {
 
     container.innerHTML = '';
     container.appendChild(script);
-
-    // ✅ نطابق الارتفاع بمجرد ظهور iframe فعلياً في الصفحة (وليس فقط
-    // بعد تحميل السكربت، لأن Telegram يُنشئ الـ iframe بعد ذلك بلحظة)
-    const heightObserver = new MutationObserver(() => {
-      if (document.querySelector('#telegramLoginContainer iframe')) {
-        syncTelegramButtonHeight();
-        heightObserver.disconnect();
-      }
-    });
-    heightObserver.observe(container, { childList: true });
-
-    // ✅ إعادة المطابقة عند تغيير حجم الشاشة (clamp يتغيّر مع الشاشة)
-    window.addEventListener('resize', syncTelegramButtonHeight);
   } catch (e) {
     console.warn('تعذر تحميل Telegram Login Widget:', e);
   }
