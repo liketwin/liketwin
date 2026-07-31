@@ -11,14 +11,6 @@
      وFont Awesome، سينتظر تحميلها بالكامل أولاً رغم عدم علاقته بها،
      وهذا كان السبب الحقيقي وراء تأخر ظهور زر Telegram. -->
 <script src="config.js"></script>
-<script>
-  // ✅ نبدأ طلب إعدادات Telegram فوراً بمجرد توفر CONFIG، بالتوازي مع
-  // تحميل باقي الصفحة (خطوط، أيقونات، CSS)، بدل انتظار وصول المتصفح
-  // لأسفل body أو انتظار اكتمال تحميل أي CSS خارجي
-  window.__tgConfigPromise = (typeof CONFIG !== 'undefined' && CONFIG.API)
-    ? fetch(`${CONFIG.API}/auth/telegram/config`).then(r => r.json()).catch(() => null)
-    : Promise.resolve(null);
-</script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-19Q0B48Y2B"></script>
 <script>
@@ -307,22 +299,6 @@ html.auth-in #termsNote { display: none; }
 .btn-github:active { transform: translateY(0); }
 
 .g-logo, .fb-logo, .tg-logo, .gh-logo { width: 21px; height: 21px; flex-shrink: 0; }
-
-/* ✅ حاوية Telegram Login Widget — توسيط بنفس ارتفاع أزرار Google/GitHub بالضبط */
-#tgLoginWrap { width: 100%; display: flex; justify-content: center; align-items: center; min-height: 44px; }
-#telegramLoginContainer { display: flex; justify-content: center; }
-/* ✅ نضبط ارتفاع iframe فقط ليطابق ارتفاع بقية الأزرار (44px)
-   — لا نُجبر العرض على 100% لأن محتوى الويدجت الداخلي من Telegram
-   لا يتمدد مع الحاوية، فكان يظهر بحجمه الطبيعي وسط مساحة فارغة
-   كبيرة، ما يجعله يبدو أصغر بدل أن يبدو أكبر */
-/* ✅ الارتفاع لا يُثبَّت هنا بقيمة ثابتة، لأن ارتفاع أزرار Google/GitHub
-   متغيّر حسب الشاشة (clamp في CSS) — بدل ذلك نقيس الارتفاع الفعلي
-   لزر Google بالجافاسكريبت (syncTelegramButtonHeight) ونطبّقه حرفياً
-   على iframe تيليغرام، فيتطابقان بكسل بكسل على أي جهاز */
-#telegramLoginContainer iframe {
-  border-radius: 12px !important;
-  border: none !important;
-}
 
 .secure-note {
   display: flex;
@@ -706,11 +682,18 @@ audio { display: block; width: 100%; margin-top: 4px; }
         </a>
 
         <!-- ✅ استُبدل الزر الثابت بحاوية ديناميكية لـ Telegram Login Widget الرسمي.
-             لا يوجد href يدوي هنا؛ الويدجت يُبنى بالكامل عبر initTelegramLoginWidget()
-             بعد جلب bot_username من GET /auth/telegram/config -->
-        <div id="tgLoginWrap">
-          <div id="telegramLoginContainer"></div>
-        </div>
+             زر عادي من تصميمنا (نفس تصميم Google/GitHub تماماً)، يستدعي
+             Telegram.Login.auth() مباشرة بالجافاسكريبت بدل استخدام
+             الويدجت التلقائي (iframe) — لأن الويدجت التلقائي لا يمكن
+             تكبير رسمه الداخلي عبر CSS، بينما هذا الأسلوب يمنحنا زراً
+             مطابقاً تماماً لحجم بقية الأزرار بلا أي حيل -->
+        <button type="button" class="btn-telegram" id="btnTelegramLogin">
+          <svg class="tg-logo" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="120" cy="120" r="120" fill="#ffffff"/>
+            <path fill="#26A5E4" d="M170.6 66.3 148 179.6c-1.7 7.6-6.2 9.4-12.5 5.9l-34.6-25.5-16.7 16.1c-1.8 1.8-3.4 3.4-6.9 3.4l2.5-35.2 64-57.8c2.8-2.5-.6-3.9-4.3-1.4l-79.1 49.8-34.1-10.7c-7.4-2.3-7.6-7.4 1.6-11l133.4-51.4c6.2-2.3 11.6 1.5 9.3 11.5z"/>
+          </svg>
+          المتابعة بحساب Telegram
+        </button>
 
         <a class="btn-github" href="#" id="btnGithubLogin">
           <svg class="gh-logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -946,89 +929,64 @@ function authHeaders() {
 }
 
 /* ══════════════════════════════════════
-   إعداد روابط تسجيل الدخول (OAuth) — Google و GitHub فقط
+   إعداد روابط تسجيل الدخول (OAuth) — Google و GitHub
    ✅ التوكن فـ httpOnly Cookie كخط دفاع أول، وفـ sessionStorage
    (عبر authHeaders أعلاه) كخط دفاع ثاني إلا كانت الكوكيز محجوبة
-   ملاحظة: Telegram لا يستخدم href مباشر — انظر initTelegramLoginWidget() أسفله
 ══════════════════════════════════════ */
 document.getElementById('btnGoogleLogin').href = `${CONFIG.API}/auth/google`;
 document.getElementById('btnGithubLogin').href = `${CONFIG.API}/auth/github`;
 
 /* ══════════════════════════════════════
-   ✅ Telegram Login Widget — يُبنى ديناميكياً بالكامل
-   لا يُكتب اسم البوت يدوياً في الكود أبداً؛ يُجلب دائماً
-   من الباك إند عبر GET /auth/telegram/config
-   ثم يُبنى سكربت الويدجت الرسمي من Telegram مع:
-     - data-telegram-login = bot_username (من الباك إند)
-     - data-auth-url        = ${CONFIG.API}/auth/telegram/callback
-     - data-size             = large
-     - data-request-access   = write
-   عند الضغط على الويدجت، يعيد Telegram توجيه المتصفح مباشرة
-   إلى data-auth-url (الباك إند)، والذي يتحقق من الـ hash،
-   يُصدر JWT، ثم يعيد التوجيه للفرونت إند بنفس آلية #auth_token
-   الموجودة أعلاه — فتلتقطها pickUpTokenFromHash() تلقائياً
-   دون أي تعديل إضافي.
+   ✅ Telegram Login — زر مخصص بالكامل (نفس تصميم Google/GitHub تماماً)
+   بدل الويدجت التلقائي من Telegram (iframe)، لأن ذلك الـ iframe لا يمكن
+   تكبير رسمه الداخلي عبر CSS مهما فعلنا بالصندوق الخارجي.
+
+   الأسلوب هنا: نُحمّل سكربت Telegram الرسمي (telegram-widget.js) بشكل
+   عادي فقط لتوفير الدالة البرمجية Telegram.Login.auth() — دون أي
+   data-telegram-login تُنشئ iframe مرئياً. ثم عند الضغط على زرنا
+   المخصص، نستدعي تلك الدالة مباشرة، فتفتح نافذة تسجيل دخول Telegram
+   الرسمية (popup صغير)، وتُعيد لنا بيانات المستخدم (id, hash, ...)
+   عبر callback في المتصفح مباشرة.
+
+   بعدها نُمرّر هذه البيانات كـ query params إلى نفس نقطة الباك إند
+   الموجودة أصلاً (/auth/telegram/callback) عبر تحويل كامل للصفحة —
+   تماماً كما لو أن Telegram نفسه أعاد التوجيه إليها — فيتحقق الباك إند
+   من الـ hash ويُصدر JWT ويعيد التوجيه للفرونت إند بنفس آلية
+   #auth_token الموجودة أعلاه، دون أي تعديل في الباك إند.
+
+   bot_id هنا رقم عام غير سرّي (بخلاف توكن البوت) — لا علاقة له بالأمان.
 ══════════════════════════════════════ */
-/* ✅ نقيس الارتفاع الفعلي لزر Google المعروض على هذا الجهاز بالذات،
-   ونحقنه كقاعدة CSS بـ !important في <style> منفصلة. هذا (وليس
-   iframe.style.height مباشرة) هو ما يضمن ثبات النتيجة: سكربت Telegram
-   الداخلي يُعيد ضبط ارتفاع الـ iframe بنفسه (inline style عادي) بعد
-   لحظات من إدراجه، وأي محاولة سابقة كانت تُهزَم بهذا التصرف. قاعدة
-   CSS بـ !important تتغلب دائماً على inline style عادي بغض النظر عن
-   توقيت تنفيذ كل منهما، فتبقى النتيجة ثابتة مهما فعل سكربت Telegram لاحقاً */
-function syncTelegramButtonHeight() {
-  const ref = document.getElementById('btnGoogleLogin');
-  if (!ref) return;
-  const h = ref.getBoundingClientRect().height;
-  if (h <= 0) return;
+const TELEGRAM_BOT_ID = '6217265103';
 
-  let styleTag = document.getElementById('tgHeightOverride');
-  if (!styleTag) {
-    styleTag = document.createElement('style');
-    styleTag.id = 'tgHeightOverride';
-    document.head.appendChild(styleTag);
+(function loadTelegramLoginScript() {
+  const script = document.createElement('script');
+  script.src = 'https://telegram.org/js/telegram-widget.js?22';
+  script.async = true;
+  document.head.appendChild(script);
+})();
+
+function handleTelegramAuth(user) {
+  if (!user) {
+    // المستخدم أغلق نافذة تسجيل الدخول أو ألغى العملية — لا شيء نفعله
+    return;
   }
-  styleTag.textContent = `#telegramLoginContainer iframe { height: ${h}px !important; }`;
+  const params = new URLSearchParams();
+  Object.keys(user).forEach((k) => params.append(k, user[k]));
+  // ✅ تحويل كامل للصفحة إلى نفس نقطة الباك إند الموجودة أصلاً،
+  // تماماً بنفس الطريقة التي يستخدمها الويدجت التلقائي عادة
+  window.location.href = `${CONFIG.API}/auth/telegram/callback?${params.toString()}`;
 }
 
-async function initTelegramLoginWidget() {
-  const container = document.getElementById('telegramLoginContainer');
-  if (!container) return;
-
-  // ✅ نحقن قاعدة الارتفاع فوراً — قبل حتى وصول رد الباك إند أو تحميل
-  // سكربت Telegram — لأن زر Google موجود ومرسوم أصلاً في الصفحة.
-  // هكذا تكون القاعدة جاهزة ومنتظرة الـ iframe بمجرد ظهوره، بلا أي
-  // فحص توقيت أو مراقبة إضافية
-  syncTelegramButtonHeight();
-  window.addEventListener('resize', syncTelegramButtonHeight);
-
-  try {
-    // ✅ نستخدم الطلب الذي بدأ مسبقاً في <head> (أعلى الصفحة) بدل بدء
-    // طلب جديد الآن — هذا يوفر الوقت الذي كان يُهدر بانتظار وصول
-    // المتصفح لنهاية body قبل حتى بدء الاتصال بالباك إند
-    const data = await window.__tgConfigPromise;
-    const botUsername = data && data.bot_username;
-
-    if (!botUsername) {
-      console.warn('Telegram config: bot_username missing');
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://telegram.org/js/telegram-widget.js?22';
-    script.async = true;
-    script.setAttribute('data-telegram-login', botUsername);
-    script.setAttribute('data-size', 'large');
-    script.setAttribute('data-radius', '12');
-    script.setAttribute('data-auth-url', `${CONFIG.API}/auth/telegram/callback`);
-    script.setAttribute('data-request-access', 'write');
-
-    container.innerHTML = '';
-    container.appendChild(script);
-  } catch (e) {
-    console.warn('تعذر تحميل Telegram Login Widget:', e);
+document.getElementById('btnTelegramLogin').addEventListener('click', function () {
+  if (window.Telegram && window.Telegram.Login) {
+    window.Telegram.Login.auth(
+      { bot_id: TELEGRAM_BOT_ID, request_access: 'write' },
+      handleTelegramAuth
+    );
+  } else {
+    console.warn('سكربت Telegram Login لم يكتمل تحميله بعد، حاول مجدداً بعد لحظة');
   }
-}
+});
 
 /* ══════════════════════════════════════
    ثوابت فحص الملف
@@ -1625,7 +1583,6 @@ document.getElementById('btnGo').onclick = async () => {
 })();
 
 checkUserStatus();
-initTelegramLoginWidget();
 </script>
 
 <footer class="footer">
