@@ -21,6 +21,18 @@
 <!-- ✅ preconnect لدومين Telegram لتسريع تحميل سكربت الويدجت وتقليل زمن الظهور -->
 <link rel="preconnect" href="https://telegram.org">
 <link rel="dns-prefetch" href="https://telegram.org">
+<!-- ✅ نُحمّل config.js هنا في <head> (وليس في آخر الصفحة كما كان سابقاً)
+     لأن CONFIG.API ضروري لبدء جلب إعدادات Telegram في أقرب وقت ممكن.
+     هذا هو السبب الحقيقي للتأخير الذي كان يظهر عند إعادة التحميل —
+     الويدجت كان ينتظر حتى نهاية الصفحة قبل أن يبدأ حتى في التحرك. -->
+<script src="config.js"></script>
+<script>
+  // ✅ نبدأ طلب إعدادات Telegram فوراً بمجرد توفر CONFIG، بالتوازي مع
+  // تحميل باقي الصفحة، بدل انتظار وصول المتصفح لأسفل body
+  window.__tgConfigPromise = (typeof CONFIG !== 'undefined' && CONFIG.API)
+    ? fetch(`${CONFIG.API}/auth/telegram/config`).then(r => r.json()).catch(() => null)
+    : Promise.resolve(null);
+</script>
 <script>
 /* ✅ يُنفَّذ فوراً قبل رسم الصفحة — يمنع ظهور زر Google للحظة عند إعادة التحميل
    لمستخدم مسجّل الدخول مسبقاً، عبر قراءة آخر حالة معروفة من localStorage. */
@@ -294,14 +306,14 @@ html.auth-in #termsNote { display: none; }
 
 .g-logo, .fb-logo, .tg-logo, .gh-logo { width: 21px; height: 21px; flex-shrink: 0; }
 
-/* ✅ حاوية Telegram Login Widget — نفس عرض وارتفاع أزرار Google/GitHub بالضبط */
-#tgLoginWrap { width: 100%; }
-#telegramLoginContainer { width: 100%; }
-/* ✅ نفرض على iframe الويدجت نفس الأبعاد الخارجية لبقية الأزرار — هذا مسموح
-   لأن العرض/الارتفاع خاصيتان للإطار الخارجي (تتحكم بها صفحتنا)، بخلاف
-   محتوى الإطار الداخلي (تحكم Telegram به فقط) */
+/* ✅ حاوية Telegram Login Widget — توسيط بنفس ارتفاع أزرار Google/GitHub بالضبط */
+#tgLoginWrap { width: 100%; display: flex; justify-content: center; align-items: center; min-height: 44px; }
+#telegramLoginContainer { display: flex; justify-content: center; }
+/* ✅ نضبط ارتفاع iframe فقط ليطابق ارتفاع بقية الأزرار (44px)
+   — لا نُجبر العرض على 100% لأن محتوى الويدجت الداخلي من Telegram
+   لا يتمدد مع الحاوية، فكان يظهر بحجمه الطبيعي وسط مساحة فارغة
+   كبيرة، ما يجعله يبدو أصغر بدل أن يبدو أكبر */
 #telegramLoginContainer iframe {
-  width: 100% !important;
   height: 44px !important;
   border-radius: 12px !important;
   border: none !important;
@@ -900,8 +912,6 @@ audio { display: block; width: 100%; margin-top: 4px; }
   </div>
 </div><!-- /modal -->
 
-<script src="config.js"></script>
-
 <script>
 /* ══════════════════════════════════════
    ✅ استلام التوكن من URL fragment بعد العودة من OAuth
@@ -959,8 +969,10 @@ async function initTelegramLoginWidget() {
   if (!container) return;
 
   try {
-    const res = await fetch(`${CONFIG.API}/auth/telegram/config`);
-    const data = await res.json();
+    // ✅ نستخدم الطلب الذي بدأ مسبقاً في <head> (أعلى الصفحة) بدل بدء
+    // طلب جديد الآن — هذا يوفر الوقت الذي كان يُهدر بانتظار وصول
+    // المتصفح لنهاية body قبل حتى بدء الاتصال بالباك إند
+    const data = await window.__tgConfigPromise;
     const botUsername = data && data.bot_username;
 
     if (!botUsername) {
