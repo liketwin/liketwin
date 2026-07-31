@@ -78,15 +78,6 @@ body::before {
   order: 10;
 }
 .back-btn:hover { background: rgba(79,142,247,0.08); }
-.btn-logout {
-  padding: 8px 14px; background: rgba(245,101,101,0.08); border: 1px solid rgba(245,101,101,0.2);
-  border-radius: 9px; color: var(--error); font-family: 'Tajawal', sans-serif;
-  font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
-  /* أصغر order = أول عنصر في تدفق RTL = أقصى اليمين، بجانب الشعار مباشرة،
-     بعيداً عن المنتصف حيث كان محشوراً بين زر العودة وزر الاشتراك. */
-  order: -10;
-}
-.btn-logout:hover { background: rgba(245,101,101,0.15); border-color: rgba(245,101,101,0.4); }
 
 /* MAIN */
 .main {
@@ -322,6 +313,8 @@ body::before {
 .btn-action.primary:hover { box-shadow: 0 0 28px rgba(79,142,247,0.4); transform: translateY(-2px); }
 .btn-action.secondary { background: var(--surface); color: var(--text2); border-color: var(--border); }
 .btn-action.secondary:hover { border-color: var(--border-h); color: var(--accent2); transform: translateY(-2px); }
+.btn-action.danger { background: rgba(245,101,101,0.08); color: var(--error); border-color: rgba(245,101,101,0.25); }
+.btn-action.danger:hover { background: rgba(245,101,101,0.15); border-color: rgba(245,101,101,0.4); transform: translateY(-2px); }
 
 /* LOADING */
 .loading-screen {
@@ -433,7 +426,6 @@ body::before {
     <a class="back-btn" href="/"><i class="fa-solid fa-arrow-left"></i> العودة</a>
     <a class="nav-link" href="/pricing">الاشتراك</a>
     <!-- <a class="nav-link active" href="/dashboard">لوحتي</a> -->
-    <button class="btn-logout" onclick="handleLogout()">خروج</button>
   </nav>
 </header>
 
@@ -631,6 +623,10 @@ body::before {
           <span><i class="fa-solid fa-arrow-up"></i></span>
           ترقية الخطة
         </a>
+        <button type="button" class="btn-action danger" onclick="handleLogout()">
+          <span><i class="fa-solid fa-arrow-right-from-bracket"></i></span>
+          تسجيل الخروج
+        </button>
       </div>
 
     </div>
