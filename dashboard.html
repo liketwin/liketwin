@@ -25,8 +25,8 @@
   --gold: #f6c90e;
   --gold2: #ffe066;
   --warn: #f6ad55;
-  --tiktok: #ff004f;
-  --tiktok2: #00f2ea;
+  --tg: #26A5E4;
+  --gh: #171515;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -122,15 +122,25 @@ body::before {
 }
 .btn-login-big:hover { background: #f0f4ff; transform: translateY(-2px); box-shadow: 0 8px 28px rgba(79,142,247,0.28); }
 
-.btn-login-tiktok {
+.btn-login-telegram {
   display: flex; align-items: center; justify-content: center; gap: 10px;
   padding: 14px 32px;
-  background: #000000; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
-  font-family: 'Tajawal', sans-serif; font-size: 1rem; font-weight: 700; color: #fff;
+  background: var(--tg); border: none; border-radius: 12px;
+  font-family: 'Tajawal', sans-serif; font-size: 1rem; font-weight: 700; color: #ffffff;
   cursor: pointer; text-decoration: none; transition: all 0.2s;
-  box-shadow: 0 2px 14px rgba(0,0,0,0.5);
+  box-shadow: 0 2px 14px rgba(0,0,0,0.35);
 }
-.btn-login-tiktok:hover { background: #111111; transform: translateY(-2px); box-shadow: 0 8px 28px rgba(255,0,79,0.25), 0 8px 28px rgba(0,242,234,0.15); }
+.btn-login-telegram:hover { background: #1e8fcc; transform: translateY(-2px); box-shadow: 0 8px 28px rgba(38,165,228,0.3); }
+
+.btn-login-github {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 14px 32px;
+  background: var(--gh); border: none; border-radius: 12px;
+  font-family: 'Tajawal', sans-serif; font-size: 1rem; font-weight: 700; color: #ffffff;
+  cursor: pointer; text-decoration: none; transition: all 0.2s;
+  box-shadow: 0 2px 14px rgba(0,0,0,0.35);
+}
+.btn-login-github:hover { background: #2b2b2b; transform: translateY(-2px); box-shadow: 0 8px 28px rgba(255,255,255,0.12); }
 
 .or-sep {
   display: flex; align-items: center; gap: 10px;
@@ -139,7 +149,7 @@ body::before {
 .or-text { font-size: 0.72rem; color: var(--text3); }
 
 .g-logo { width: 20px; height: 20px; flex-shrink: 0; }
-.tiktok-logo { width: 20px; height: 20px; flex-shrink: 0; }
+.tg-logo, .gh-logo { width: 20px; height: 20px; flex-shrink: 0; }
 
 /* DASHBOARD SCREEN */
 .dashboard { display: none; flex-direction: column; gap: 28px; width: 100%; }
@@ -460,12 +470,28 @@ body::before {
         <div class="or-line"></div>
       </div>
 
-      <!-- TikTok -->
-      <a class="btn-login-tiktok" href="#" id="btnTiktokLogin">
-        <svg class="tiktok-logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path d="M16.6 5.82c-.9-.98-1.4-2.26-1.4-3.62h-3.14v13.44c0 1.62-1.32 2.94-2.94 2.94a2.94 2.94 0 0 1-2.94-2.94 2.94 2.94 0 0 1 2.94-2.94c.3 0 .59.05.87.13V9.66a6.1 6.1 0 0 0-.87-.06A6.1 6.1 0 0 0 3.1 15.7a6.1 6.1 0 0 0 6.02 6.1 6.1 6.1 0 0 0 6.1-6.1V9.03a9.3 9.3 0 0 0 5.4 1.72V7.6a5.4 5.4 0 0 1-3.02-.78 5.5 5.5 0 0 1-1-1z" fill="#ffffff"/>
+      <!-- Telegram: نفس أسلوب الزر المخصص المستخدم في الصفحة الرئيسية
+           (Telegram.Login.auth() بدل الويدجت التلقائي iframe) -->
+      <button type="button" class="btn-login-telegram" id="btnTelegramLogin">
+        <svg class="tg-logo" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="120" cy="120" r="120" fill="#ffffff"/>
+          <path fill="#26A5E4" d="M170.6 66.3 148 179.6c-1.7 7.6-6.2 9.4-12.5 5.9l-34.6-25.5-16.7 16.1c-1.8 1.8-3.4 3.4-6.9 3.4l2.5-35.2 64-57.8c2.8-2.5-.6-3.9-4.3-1.4l-79.1 49.8-34.1-10.7c-7.4-2.3-7.6-7.4 1.6-11l133.4-51.4c6.2-2.3 11.6 1.5 9.3 11.5z"/>
         </svg>
-        المتابعة بحساب TikTok
+        المتابعة بحساب Telegram
+      </button>
+
+      <div class="or-sep">
+        <div class="or-line"></div>
+        <span class="or-text">أو</span>
+        <div class="or-line"></div>
+      </div>
+
+      <!-- GitHub -->
+      <a class="btn-login-github" href="#" id="btnGithubLogin">
+        <svg class="gh-logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path fill="#ffffff" d="M12 .5C5.73.5.5 5.73.5 12c0 5.09 3.29 9.4 7.86 10.93.57.1.78-.25.78-.55 0-.27-.01-1.15-.02-2.09-3.2.7-3.88-1.36-3.88-1.36-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.7.08-.7 1.17.08 1.78 1.2 1.78 1.2 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.7 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.47.11-3.06 0 0 .97-.31 3.18 1.18a11.06 11.06 0 0 1 5.79 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.77.11 3.06.74.8 1.19 1.83 1.19 3.09 0 4.43-2.7 5.4-5.26 5.69.41.36.78 1.06.78 2.14 0 1.55-.01 2.79-.01 3.17 0 .3.21.66.79.55A10.52 10.52 0 0 0 23.5 12C23.5 5.73 18.27.5 12 .5z"/>
+        </svg>
+        المتابعة بحساب GitHub
       </a>
 
     </div>
@@ -639,9 +665,47 @@ const PLAN_DISPLAY = {
   advanced: { label: 'المتقدم',   price: 10, comparisons: 130, cls: 'advanced' },
 };
 
-// ✅ روابط OAuth تُبنى ديناميكياً نحو دومين الـ API
+// ✅ روابط OAuth تُبنى ديناميكياً نحو دومين الـ API (Google و GitHub)
 document.getElementById('btnGoogleLogin').href = `${CONFIG.API}/auth/google`;
-document.getElementById('btnTiktokLogin').href  = `${CONFIG.API}/auth/tiktok`;
+document.getElementById('btnGithubLogin').href = `${CONFIG.API}/auth/github`;
+
+/* ══════════════════════════════════════
+   ✅ Telegram Login — نفس أسلوب الصفحة الرئيسية تماماً: زر مخصص
+   بدل الويدجت التلقائي (iframe)، يستدعي Telegram.Login.auth()
+   مباشرة، ثم يُحوّل النتيجة إلى /auth/telegram/callback عبر
+   تحويل كامل للصفحة، فيُصدر الباك إند JWT ويُعيد التوجيه بنفس
+   آلية #auth_token المستخدمة في بقية الموقع.
+   bot_id رقم عام غير سرّي (بخلاف توكن البوت).
+══════════════════════════════════════ */
+const TELEGRAM_BOT_ID = 8866235667;
+
+(function loadTelegramLoginScript() {
+  const script = document.createElement('script');
+  script.src = 'https://telegram.org/js/telegram-widget.js?22';
+  script.async = true;
+  document.head.appendChild(script);
+})();
+
+function handleTelegramAuth(user) {
+  if (!user) {
+    // المستخدم أغلق نافذة تسجيل الدخول أو ألغى العملية — لا شيء نفعله
+    return;
+  }
+  const params = new URLSearchParams();
+  Object.keys(user).forEach((k) => params.append(k, user[k]));
+  window.location.href = `${CONFIG.API}/auth/telegram/callback?${params.toString()}`;
+}
+
+document.getElementById('btnTelegramLogin').addEventListener('click', function () {
+  if (window.Telegram && window.Telegram.Login) {
+    window.Telegram.Login.auth(
+      { bot_id: TELEGRAM_BOT_ID, request_access: 'write' },
+      handleTelegramAuth
+    );
+  } else {
+    console.warn('سكربت Telegram Login لم يكتمل تحميله بعد، حاول مجدداً بعد لحظة');
+  }
+});
 
 // ✅ بيانات المستخدم تُجلب من السيرفر عبر Cookie — لا قراءة للتوكن في JS
 let _currentUser = null;
@@ -657,9 +721,9 @@ async function loadCurrentUser() {
   } catch { _currentUser = null; }
 }
 
-// ✅ هوية تسجيل الدخول الحقيقية هي user_id، ماشي email — تيك توك ما
+// ✅ هوية تسجيل الدخول الحقيقية هي user_id، ماشي email — Telegram ما
 // كيرجعش بريد إلكتروني نهائياً، فـ email كيبقى null عند المستخدمين اللي
-// دخلو بـ TikTok رغم أنهم مسجلين الدخول فعلاً
+// دخلو بـ Telegram رغم أنهم مسجلين الدخول فعلاً
 function getUserId()    { return _currentUser ? _currentUser.user_id : null; }
 function getUserEmail() { return _currentUser ? _currentUser.email : null; }
 function getUserName()  { return _currentUser ? (_currentUser.name || null) : null; }
@@ -668,7 +732,7 @@ function getDisplayLabel() {
   const email = getUserEmail();
   if (email) return email;
   const name = getUserName();
-  return name ? name : 'مستخدم TikTok';
+  return name ? name : 'مستخدم Telegram';
 }
 
 function showToast(msg, isError = false) {
@@ -716,7 +780,7 @@ function renderDashboard(userData) {
   titleEl.appendChild(smileIcon);
 
   // ✅ نعرض سطر "بريدك" وصف البريد فقط إذا كان عندنا بريد إلكتروني حقيقي
-  // (Google) — تيك توك ما كيرجعش بريد إلكتروني، فما بغيناش نعرضو اسم
+  // (Google/GitHub) — Telegram ما كيرجعش بريد إلكتروني، فما بغيناش نعرضو اسم
   // المستخدم وكأنه بريد إلكتروني
   const emailSubRow = document.getElementById('emailSubRow');
   const planEmailRow = document.getElementById('planEmailRow');
