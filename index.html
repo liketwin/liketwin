@@ -879,6 +879,34 @@ audio { display: block; width: 100%; margin-top: 4px; }
 </div><!-- /modal -->
 
 <script>
+/* ══════════════════════════════════════════════════════════════════════
+   ✅ ملاحظة عن عقد الـ API (backend contract) المطلوب لهذا التعديل:
+
+   المشكلة سابقاً: كان الطلب `POST /compare_audio` طلباً واحداً يبقى
+   مفتوحاً حتى تنتهي المعالجة (طلب متزامن/synchronous). أي تنقّل كامل
+   لصفحة أخرى (وليس مجرد تبديل تبويب) يُلغي فعلياً أي طلب fetch قيد
+   التنفيذ في تلك اللحظة من طرف المتصفح، لذلك لم يكن هناك أي طريقة
+   حقيقية لـ"استئناف" التحليل عند العودة سوى إعادة إرسال نفس الملف من
+   جديد — وهذا ليس معالجة "في الخلفية" فعلياً، بل إعادة تشغيل.
+
+   الحل: يجب أن يتحوّل الـ backend إلى نموذج "مهمة/Job" غير متزامن:
+     1) POST {CONFIG.API}/compare_audio  → يُنشئ المهمة فوراً على
+        الخادم ويرجع الاستجابة خلال ثوانٍ:
+          { status: "success", job_id: "xxxx" }
+        (المعالجة الفعلية للصوت تستمر على الخادم في الخلفية، بمعزل
+        تام عن حالة متصفح العميل)
+     2) GET {CONFIG.API}/job_status?job_id=xxxx → تُستخدَم للفحص
+        الدوري وتُرجع واحدة من:
+          { status: "processing" }                         (لا تزال جارية)
+          { status: "success", top_readers: [...], remaining } (انتهت)
+          { status: "error", message: "..." }               (فشلت)
+
+   بهذا الشكل: عندما يغادر المستخدم الصفحة ويعود، لا نُعيد رفع أي
+   شيء ولا نُعيد تشغيل التحليل من الصفر؛ فقط نستأنف الفحص الدوري
+   لنفس job_id، وإن كانت المهمة قد انتهت أثناء غيابه فسيظهر السجل
+   عليه النتائج فوراً من أول فحص.
+══════════════════════════════════════════════════════════════════════ */
+
 (function pickUpTokenFromHash() {
   const m = location.hash.match(/auth_token=([^&]+)/);
   if (m) {
@@ -1107,11 +1135,12 @@ async function checkUserStatus() {
   try { localStorage.setItem('lt_upload', 'locked'); } catch (e) {}
 }
 
-let ctrl = null, busy = false;
+let busy = false;
+let pollCtrl = null;   // AbortController لطلب الفحص الدوري الحالي (وأيضاً لطلب بدء المهمة)
+let pollTimer = null;  // معرّف setTimeout للفحص الدوري القادم
 
 document.getElementById('btnStop').onclick = () => {
-  if (ctrl) ctrl.abort();
-  setBusy(false);
+  stopPolling();
   document.getElementById('fileInput').value = '';
   setLabelState('idle', window.idleLabel);
   view('hero');
@@ -1136,10 +1165,17 @@ function setBusy(on) {
   document.getElementById('btnStop').style.display = on ? 'inline-block' : 'none';
 }
 
+// ✅ إيقاف أي فحص دوري جارٍ (يُستخدم عند الإلغاء أو بدء تحليل جديد)
+function stopPolling() {
+  if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+  if (pollCtrl) { try { pollCtrl.abort(); } catch (e) {} pollCtrl = null; }
+  setBusy(false);
+}
+
 function aurl(u) { return u && u.startsWith('http') ? u : location.origin + u; }
 
 const SCAN_STATE_KEY = 'lt_scan';
-const SCAN_MAX_AGE_MS = 3 * 60 * 1000; // 3 دقائق
+const SCAN_MAX_AGE_MS = 3 * 60 * 1000; // 3 دقائق — يُطبَّق فقط على حالات النتائج/الخطأ المخزّنة، وليس على مهمة لا تزال قيد المعالجة فعلياً على الخادم
 
 function saveScanState(obj) {
   try { sessionStorage.setItem(SCAN_STATE_KEY, JSON.stringify(obj)); } catch (e) {}
@@ -1163,12 +1199,15 @@ function clearScanState() {
    (~5-10MB)، وأي محاولة تخزين نص base64 أكبر من الحد تفشل بصمت (catch
    فارغ) فيضيع الملف دون إشعار؛ وكانت هناك فجوة زمنية (FileReader غير
    متزامن) قد تجعل الملف غير محفوظ إذا غادر المستخدم بسرعة؛ وإعادة
-   البناء عبر fetch(dataURL) خطوة إضافية عرضة للفشل — وهي بالضبط ما كان
-   يُنتج رسالة "فشل الاتصال بالخادم" رغم أن المشكلة لم تكن في الخادم
-   بل في إعادة بناء الملف محلياً قبل حتى إرساله.
-   IndexedDB مصمم أصلاً لتخزين Blobs كبيرة بمساحة أكبر بكثير، يحتفظ
-   بالملف كما هو دون أي تحويل نصي، ويبقى محفوظاً عبر التنقل بين صفحات
-   نفس الموقع، ونمسحه يدوياً بعد كل استخدام (انظر idbDeleteFile).
+   البناء عبر fetch(dataURL) خطوة إضافية عرضة للفشل.
+
+   الآن IndexedDB يُستخدَم فقط كحفظ احتياطي لملف الصوت الأصلي، لغرضٍ
+   واحد محدد: إن فشل طلب "بدء المهمة" نفسه (compare_audio) بسبب مشكلة
+   اتصال قبل حتى أن يحصل على job_id من الخادم، يمكن لزر "المحاولة مرة
+   أخرى" إعادة إرسال نفس الملف دون إجبار المستخدم على رفعه من جديد.
+   أما بمجرد نجاح بدء المهمة والحصول على job_id، فإننا نحذف الملف من
+   IndexedDB فوراً لأن الاستئناف بعدها يعتمد فقط على الفحص الدوري
+   لـ job_id (المعالجة تستمر على الخادم بمعزل عن المتصفح).
 ══════════════════════════════════════ */
 const IDB_NAME  = 'liketwin_resume';
 const IDB_STORE = 'files';
@@ -1227,15 +1266,18 @@ async function idbDeleteFile() {
   } catch (e) { /* تجاهل */ }
 }
 
-function persistLoadingState(file) {
-  // ✅ نحفظ فقط علامة "جاري التحليل" + الوقت في sessionStorage (خفيف
-  // وفوري)، والملف الفعلي يُخزَّن بالتوازي عبر idbSetFile في IndexedDB
-  saveScanState({ v: 'load', ts: Date.now() });
-}
-
 async function restoreScanState() {
   const st = loadScanState();
   if (!st) return;
+
+  // ✅ حالة "قيد المعالجة" ولديها job_id فعلي — المهمة تعمل على الخادم
+  // بغض النظر عمّا فعله المستخدم في متصفحه، فنستأنف الفحص الدوري مباشرة
+  // بلا أي حد زمني تعسفي (قد تأخذ المعالجة وقتاً طويلاً وهذا طبيعي)
+  if (st.v === 'load' && st.job_id) {
+    view('load');
+    pollJobStatus(st.job_id);
+    return;
+  }
 
   if (!st.ts || (Date.now() - st.ts) > SCAN_MAX_AGE_MS) {
     clearScanState();
@@ -1262,18 +1304,14 @@ async function restoreScanState() {
   }
 
   if (st.v === 'load') {
-    // ✅ كان المستخدم في وضع "جاري التحليل" قبل مغادرته الصفحة. مغادرة
-    // الصفحة (تنقّل كامل) تُلغي أي طلب fetch كان قيد التنفيذ فعلياً،
-    // فلا سبيل لاستئنافه فعلياً سوى إعادة إرسال نفس الملف من جديد.
-    view('load'); // نعرض شاشة التحميل فوراً بدل الوميض على واجهة الرفع الفارغة
+    // توافقية مع حالة قديمة (بلا job_id) — لم تكن المهمة قد بدأت فعلياً
+    // على الخادم بعد، فالسبيل الوحيد هو إعادة إرسال الملف المحفوظ محلياً
+    view('load');
     const rec = await idbGetFile();
     if (rec && rec.blob) {
       const file = new File([rec.blob], rec.name || 'audio', { type: rec.type || rec.blob.type || 'audio/mpeg' });
       runAnalysis(file);
     } else {
-      // لم نتمكن من استرجاع الملف (IndexedDB غير مدعوم أو تم مسحه) —
-      // لا يمكننا استئناف التحليل، فنعرض رسالة واضحة بدل تعليق شاشة
-      // "جاري التحليل" إلى الأبد
       clearScanState();
       document.getElementById('errMsg').textContent = 'انتهت الجلسة أثناء التحليل، الرجاء رفع الملف والمحاولة مجدداً.';
       document.getElementById('btnSubscribeErr').style.display = 'none';
@@ -1283,8 +1321,7 @@ async function restoreScanState() {
 }
 
 function resetToUpload() {
-  if (ctrl) { try { ctrl.abort(); } catch (e) {} }
-  setBusy(false);
+  stopPolling();
 
   const fileInput = document.getElementById('fileInput');
   fileInput.value = '';
@@ -1512,14 +1549,110 @@ document.addEventListener('play', function (e) {
   });
 }, true);
 
+// ✅ يعرض نتيجة ناجحة قادمة من job_status ("success") — يُستخدَم من داخل
+// pollJobStatus حتى لا نكرر نفس منطق البناء في أكثر من مكان
+function showSuccessResult(data) {
+  const readers = data.top_readers || [];
+  window.lastReaders = readers;
+
+  document.getElementById('readersBody').innerHTML = readers.map(readerCard).join('');
+  document.getElementById('readersCount').textContent = readers.length + ' قارئ';
+  document.getElementById('shareBody').innerHTML = buildSharePanel(readers);
+  document.getElementById('headCopyBtns').classList.add('visible');
+  view('res');
+  saveScanState({ v: 'res', ts: Date.now(), readers });
+  idbDeleteFile();
+
+  warmUpResultAudios();
+
+  if (typeof data.remaining === 'number') {
+    const currentPlanGuess = { plan: window.lastKnownPlan, remaining: data.remaining };
+    updateSubscribeButton(currentPlanGuess);
+  }
+}
+
+// ✅ يعرض خطأ قادم من job_status ("error") أو من فشل بدء المهمة
+function showJobError(msg, extra) {
+  const subMsgs = ['يجب الاشتراك', 'لا توجد خطة نشطة', 'انتهت المحاولات'];
+  const showSub = subMsgs.includes(msg);
+  document.getElementById('errMsg').textContent = msg;
+  document.getElementById('btnSubscribeErr').style.display = showSub ? 'inline-block' : 'none';
+  view('err');
+  saveScanState(Object.assign({ v: 'err', ts: Date.now(), errMsg: msg, showSub }, extra || {}));
+  if (showSub) updateSubscribeButton({ plan: null, remaining: 0 });
+}
+
+const POLL_INTERVAL_MS = 3000;
+
+// ✅ الفحص الدوري لحالة مهمة التحليل على الخادم. يُستدعى إما مباشرة بعد
+// بدء مهمة جديدة، أو عند استعادة حالة "قيد المعالجة" بعد العودة لصفحة
+// التحليل من صفحة أخرى — في الحالتين لا نُعيد إرسال أي ملف، فقط نسأل
+// الخادم عن آخر حالة لنفس job_id.
+async function pollJobStatus(jobId) {
+  setBusy(true);
+  view('load');
+
+  let consecutiveFailures = 0;
+
+  async function tick() {
+    pollCtrl = new AbortController();
+    try {
+      const res = await fetch(`${CONFIG.API}/job_status?job_id=${encodeURIComponent(jobId)}`, {
+        credentials: 'include',
+        headers: authHeaders(),
+        signal: pollCtrl.signal,
+      });
+      const data = await res.json();
+      consecutiveFailures = 0;
+
+      if (data.status === 'processing' || data.status === 'pending') {
+        // لا تزال قيد المعالجة — نُحدّث الطابع الزمني كي لا تُعتبر الحالة قديمة، ونستمر بالفحص
+        saveScanState({ v: 'load', job_id: jobId, ts: Date.now() });
+        pollTimer = setTimeout(tick, POLL_INTERVAL_MS);
+        return;
+      }
+
+      if (data.status === 'success') {
+        setBusy(false);
+        showSuccessResult(data);
+        return;
+      }
+
+      // status === 'error' أو أي حالة غير متوقعة أخرى
+      setBusy(false);
+      showJobError(data.message || 'حدث خطأ غير متوقع');
+
+    } catch (e) {
+      if (e.name === 'AbortError') return; // أُلغي عمداً (مثلاً بزر الإلغاء)
+
+      consecutiveFailures++;
+      // ✅ فشل شبكي عابر أثناء الفحص الدوري (كأن يكون التبويب في الخلفية
+      // لحظياً) لا يعني بالضرورة أن المهمة فشلت على الخادم — نُعيد
+      // المحاولة بصمت، ولا نُبلّغ المستخدم بخطأ إلا بعد عدة إخفاقات متتالية
+      if (consecutiveFailures >= 5) {
+        setBusy(false);
+        showJobError('فشل الاتصال بالخادم، حاول مجدداً.', { job_id: jobId });
+        return;
+      }
+      pollTimer = setTimeout(tick, POLL_INTERVAL_MS);
+    }
+  }
+
+  tick();
+}
+
+// ✅ بدء مهمة تحليل جديدة: نرسل الملف مرة واحدة فقط للحصول على job_id،
+// ثم نُسلّم الأمر بالكامل للفحص الدوري (pollJobStatus). أي تنقّل لاحق
+// بين الصفحات لن يوقف المعالجة، لأنها أصبحت مسؤولية الخادم لا المتصفح.
 async function runAnalysis(file) {
   if (!file || busy) return;
 
   setBusy(true);
-  ctrl = new AbortController();
+  pollCtrl = new AbortController();
   view('load');
 
-  persistLoadingState(file);
+  // نحتفظ بالملف مؤقتاً في IndexedDB فقط تحسباً لفشل طلب "بدء المهمة"
+  // نفسه (قبل حتى الحصول على job_id) — انظر التعليق أعلى idbSetFile
   idbSetFile(file);
 
   const fd = new FormData();
@@ -1529,57 +1662,33 @@ async function runAnalysis(file) {
     const res = await fetch(`${CONFIG.API}/compare_audio`, {
       method: 'POST',
       body: fd,
-      signal: ctrl.signal,
+      signal: pollCtrl.signal,
       credentials: 'include',
       headers: authHeaders(),
     });
 
     const data = await res.json();
-    setBusy(false);
 
-    if (data.status !== 'success') {
-      const msg = data.message || 'حدث خطأ غير متوقع';
-      const subMsgs = ['يجب الاشتراك', 'لا توجد خطة نشطة', 'انتهت المحاولات'];
-      const showSub = subMsgs.includes(msg);
-      document.getElementById('errMsg').textContent = msg;
-      document.getElementById('btnSubscribeErr').style.display = showSub ? 'inline-block' : 'none';
-      view('err');
-      saveScanState({ v: 'err', ts: Date.now(), errMsg: msg, showSub });
+    if (data.status !== 'success' || !data.job_id) {
+      setBusy(false);
       idbDeleteFile();
-      if (showSub) {
-        updateSubscribeButton({ plan: null, remaining: 0 });
-      }
+      showJobError(data.message || 'حدث خطأ غير متوقع');
       return;
     }
 
-    const readers = data.top_readers || [];
-    window.lastReaders = readers;
-
-    document.getElementById('readersBody').innerHTML = readers.map(readerCard).join('');
-    document.getElementById('readersCount').textContent = readers.length + ' قارئ';
-    document.getElementById('shareBody').innerHTML = buildSharePanel(readers);
-    document.getElementById('headCopyBtns').classList.add('visible');
-    view('res');
-    saveScanState({ v: 'res', ts: Date.now(), readers });
+    // ✅ بدأت المهمة فعلياً على الخادم — لم نعد بحاجة لحفظ الملف محلياً،
+    // فالمعالجة الآن مسؤولية الخادم بمعزل عن حالة هذا المتصفح
     idbDeleteFile();
-
-    warmUpResultAudios();
-
-    if (typeof data.remaining === 'number') {
-      const currentPlanGuess = { plan: window.lastKnownPlan, remaining: data.remaining };
-      updateSubscribeButton(currentPlanGuess);
-    }
+    saveScanState({ v: 'load', job_id: data.job_id, ts: Date.now() });
+    pollJobStatus(data.job_id);
 
   } catch (e) {
     setBusy(false);
     if (e.name !== 'AbortError') {
-      // ✅ فشل اتصال حقيقي (لا علاقة له بالملف نفسه) — نُبقي الملف محفوظاً
-      // في IndexedDB عمداً كي يستطيع زر "المحاولة مرة أخرى" إعادة إرساله
-      // فوراً دون أن يُضطر المستخدم لرفعه من جديد
-      const msg = 'فشل الاتصال بالخادم، حاول مجدداً.';
-      document.getElementById('errMsg').textContent = msg;
-      view('err');
-      saveScanState({ v: 'err', ts: Date.now(), errMsg: msg, showSub: false });
+      // ✅ فشل اتصال حقيقي أثناء طلب البدء نفسه (لم تُنشأ أي مهمة بعد) —
+      // نُبقي الملف محفوظاً في IndexedDB كي يستطيع زر "المحاولة مرة أخرى"
+      // إعادة إرسال طلب البدء فوراً دون أن يُضطر المستخدم لرفعه من جديد
+      showJobError('فشل الاتصال بالخادم، حاول مجدداً.');
     } else {
       // ✅ طلب أُلغي فعلياً (مثلاً عبر زر الإلغاء) — لا داعي لحفظ أي حالة
       clearScanState();
@@ -1593,10 +1702,19 @@ document.getElementById('btnGo').onclick = () => {
 };
 
 async function handleRetryClick() {
-  // ✅ إذا كان الملف الأخير لا يزال محفوظاً في IndexedDB (فشل اتصال
-  // عابر مثلاً)، نعيد إرساله مباشرة بدل إجبار المستخدم على رفعه من
-  // جديد. إن لم يوجد ملف محفوظ (خطأ من السيرفر لسبب آخر، أو انتهت
-  // صلاحية الجلسة)، نعود لواجهة الرفع العادية.
+  const st = loadScanState();
+
+  // ✅ إن كانت آخر حالة معروفة هي مهمة لها job_id، فالخطأ الأخير كان على
+  // الأرجح في الفحص الدوري نفسه فقط، والمهمة قد تكون لا تزال (أو أصبحت)
+  // منتهية على الخادم — نستأنف الفحص بنفس job_id بلا أي إعادة رفع
+  if (st && st.job_id) {
+    view('load');
+    pollJobStatus(st.job_id);
+    return;
+  }
+
+  // وإلا، إن كان لدينا الملف الأصلي محفوظاً في IndexedDB (فشل طلب البدء
+  // نفسه قبل الحصول على job_id)، نعيد إرساله لبدء مهمة جديدة
   const rec = await idbGetFile();
   if (rec && rec.blob) {
     const file = new File([rec.blob], rec.name || 'audio', { type: rec.type || rec.blob.type || 'audio/mpeg' });
