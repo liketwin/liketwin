@@ -5,6 +5,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- ✅ نُحمّل config.js كأول شيء في <head>، قبل أي رابط CSS خارجي.
+     المتصفح يُجبر أي <script> عادي على انتظار كل stylesheet خارجي
+     يسبقه في الصفحة قبل تنفيذه — لو بقي config.js بعد روابط الخطوط
+     وFont Awesome، سينتظر تحميلها بالكامل أولاً رغم عدم علاقته بها،
+     وهذا كان السبب الحقيقي وراء تأخر ظهور زر Telegram. -->
 <script src="config.js"></script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-19Q0B48Y2B"></script>
@@ -19,9 +24,12 @@
 <link rel="icon" type="image/png" href="/favicon.png">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<!-- ✅ preconnect لدومين Telegram لتسريع تحميل سكربت الويدجت وتقليل زمن الظهور -->
 <link rel="preconnect" href="https://telegram.org">
 <link rel="dns-prefetch" href="https://telegram.org">
 <script>
+/* ✅ يُنفَّذ فوراً قبل رسم الصفحة — يمنع ظهور زر Google للحظة عند إعادة التحميل
+   لمستخدم مسجّل الدخول مسبقاً، عبر قراءة آخر حالة معروفة من localStorage. */
 (function () {
   try {
     var cached = localStorage.getItem('lt_auth');
@@ -30,12 +38,20 @@
     document.documentElement.classList.add('auth-out');
   }
   try {
+    // ✅ زر "اشترك الآن": الحالة الافتراضية دائماً "hide" حتى تتأكد الصفحة
+    // من حالة المستخدم عبر /get_user_info — هكذا لا يظهر أبداً لغير المسجّلين
+    // ولا يظهر للحظة زائفة عند إعادة التحميل قبل أن نعرف حالة الاشتراك.
     var cachedSub = localStorage.getItem('lt_sub');
     document.documentElement.classList.add(cachedSub === 'show' ? 'sub-show' : 'sub-hide');
   } catch (e) {
     document.documentElement.classList.add('sub-hide');
   }
   try {
+    // ✅ نص حقل رفع الملف: نعتمد آخر حالة معروفة (مشترك وله محاولات متبقية
+    // أم لا) من localStorage لعرض النص الصحيح "ارفع صوتك لمدة 20 ثانية"
+    // مباشرة من أول رسم للصفحة، بدل عرض "ارفع ملفاً (يتطلب اشتراك)" ثم
+    // تبديله بعد استجابة /get_user_info — وهذا هو سبب الوميض الذي كان
+    // يظهر عند إعادة التحميل للمشترك صاحب محاولات متبقية.
     var cachedUpload = localStorage.getItem('lt_upload');
     document.documentElement.classList.add(cachedUpload === 'ready' ? 'upload-ready' : 'upload-locked');
   } catch (e) {
@@ -90,6 +106,7 @@ body::before {
   z-index: 0;
 }
 
+/* ═══ TOPBAR / NAVBAR (مبسّط) ═══ */
 .topbar {
   flex-shrink: 0;
   height: 64px;
@@ -133,17 +150,22 @@ html.auth-in .nav-link.dash { display: inline-flex; }
 
 .nav-toggle { display: none; }
 
+/* ═══ حالة تسجيل الدخول — تُحسم فوراً عبر كلاس على <html> لمنع أي وميض عند إعادة التحميل ═══ */
 #authSection { display: none; }
 #appPanel { display: none; }
 html.auth-out #authSection { display: block; }
 html.auth-in #appPanel { display: flex; flex-direction: column; gap: 14px; }
 html.auth-in #termsNote { display: none; }
 
+/* ✅ نص حقل الرفع الافتراضي (قبل اختيار أي ملف): نعرض النص الصحيح فوراً
+   عبر كلاس على <html> بدل انتظار استجابة /get_user_info، لمنع الوميض */
 html.upload-locked .fnl-ready { display: none; }
 html.upload-ready .fnl-locked { display: none; }
 
+/* ═══ STAGE ═══ */
 .stage { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; position: relative; z-index: 1; }
 
+/* ═══ HERO ═══ */
 .hero {
   flex: 1;
   display: flex;
@@ -207,6 +229,7 @@ html.upload-ready .fnl-locked { display: none; }
 .pill strong { color: var(--accent2); }
 .pill i { color: var(--success); font-size: 0.75rem; }
 
+/* ═══ CTA CARD (تسجيل الدخول / التطبيق) ═══ */
 .cta-card {
   width: 100%;
   max-width: 420px;
@@ -304,6 +327,7 @@ html.upload-ready .fnl-locked { display: none; }
 }
 .secure-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 6px rgba(72,187,120,0.5); }
 
+/* الأزرار الثانوية */
 .secondary-actions {
   display: flex;
   gap: 10px;
@@ -338,6 +362,7 @@ html.sub-show #secondaryActions { display: flex; }
 .terms-note a { color: var(--accent2); text-decoration: none; }
 .terms-note a:hover { text-decoration: underline; }
 
+/* ═══ لوحة رفع الملف (تظهر بعد تسجيل الدخول) ═══ */
 .app-panel {
   width: 100%;
   max-width: 480px;
@@ -397,6 +422,7 @@ input[type=file] { display: none; }
 .btn-stop { display: none; background: rgba(245,101,101,0.1); color: var(--error); border: 1px solid rgba(245,101,101,0.25); }
 .btn-stop:hover { background: rgba(245,101,101,0.18); }
 
+/* ═══ LOADING / ERROR ═══ */
 .loading { flex: 1; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
 .loading.on { display: flex; }
 .spinner { width: 44px; height: 44px; border: 3px solid var(--surface2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -406,6 +432,7 @@ input[type=file] { display: none; }
 .err.on { display: flex; }
 .err-box { display: flex; gap: 10px; align-items: center; padding: 14px 20px; background: rgba(245,101,101,0.08); border: 1px solid rgba(245,101,101,0.25); border-radius: 10px; color: var(--error); font-size: 0.9rem; }
 
+/* ═══ RESULTS ═══ */
 .results { display: none; flex: 1; min-height: 0; grid-template-columns: 1fr 1fr; }
 .results.on { display: grid; }
 .col { display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--border); }
@@ -423,6 +450,7 @@ input[type=file] { display: none; }
 .head-btn.copy.copied { background: rgba(72,187,120,0.1); color: var(--success); border-color: rgba(72,187,120,0.25); }
 .head-btn.share-btn { background: rgba(126,179,255,0.1); color: var(--accent2); border: 1px solid rgba(126,179,255,0.22); }
 .head-btn.share-btn:hover { background: rgba(126,179,255,0.2); }
+/* ✅ زر "تحليل جديد" في رأس عمود المشاركة */
 .head-btn.new-scan { background: rgba(79,142,247,0.14); color: #fff; border: 1px solid rgba(79,142,247,0.3); }
 .head-btn.new-scan:hover { background: rgba(79,142,247,0.24); }
 
@@ -460,6 +488,7 @@ audio { display: block; width: 100%; margin-top: 4px; }
 .share-reader-sub { font-size: 0.72rem; color: var(--text3); margin-top: 2px; }
 .share-pct { font-size: 1rem; font-weight: 900; color: var(--success); flex-shrink: 0; }
 
+/* ═══ MODAL ═══ */
 .modal-overlay { position: fixed; inset: 0; background: rgba(5, 8, 18, 0.82); backdrop-filter: blur(10px); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
 .modal-overlay.open { opacity: 1; pointer-events: all; }
 .modal-card { width: 100%; max-width: 480px; background: #0f1624; border: 1px solid rgba(100,140,255,0.2); border-radius: 20px; overflow: hidden; box-shadow: 0 0 0 1px rgba(79,142,247,0.06), 0 24px 80px rgba(0,0,0,0.7), 0 0 60px rgba(79,142,247,0.07); transform: translateY(20px) scale(0.97); transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s ease; opacity: 0; }
@@ -511,6 +540,7 @@ audio { display: block; width: 100%; margin-top: 4px; }
 .platform-btn svg { width: 22px; height: 22px; }
 .modal-footer { padding: 12px 20px 16px; text-align: center; font-size: 0.72rem; color: var(--text3); border-top: 1px solid rgba(100,140,255,0.07); }
 
+/* ═══ FOOTER ═══ */
 .footer { direction: rtl; font-family: 'Tajawal', sans-serif; background: #0a0e1a; border-top: 1px solid rgba(100,140,255,0.1); min-height: 40px; flex-shrink: 0; display: flex; align-items: center; padding: 8px 16px; position: relative; z-index: 1; }
 .footer-content { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
 .footer-copy { color:#5a6a8a; font-size:0.78rem; }
@@ -520,6 +550,7 @@ audio { display: block; width: 100%; margin-top: 4px; }
 .footer-wa { display:flex; align-items:center; gap:6px; color:#25d366; font-size:0.78rem; font-weight:700; text-decoration:none; opacity:0.8; transition:0.2s; }
 .footer-wa:hover { opacity:1; }
 
+/* ✅ زر عائم "تحليل جديد" — يظهر فقط في وضعي النتائج والخطأ */
 .fab-new {
   position: fixed;
   bottom: 24px;
@@ -543,6 +574,7 @@ audio { display: block; width: 100%; margin-top: 4px; }
 .fab-new:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(79,142,247,0.55); }
 .fab-new.show { display: flex; }
 
+/* زر "المحاولة مرة أخرى" داخل حالة الخطأ */
 .err-retry-btn {
   display: inline-flex;
   align-items: center;
@@ -665,6 +697,12 @@ audio { display: block; width: 100%; margin-top: 4px; }
           المتابعة بحساب Google
         </a>
 
+        <!-- ✅ استُبدل الزر الثابت بحاوية ديناميكية لـ Telegram Login Widget الرسمي.
+             زر عادي من تصميمنا (نفس تصميم Google/GitHub تماماً)، يستدعي
+             Telegram.Login.auth() مباشرة بالجافاسكريبت بدل استخدام
+             الويدجت التلقائي (iframe) — لأن الويدجت التلقائي لا يمكن
+             تكبير رسمه الداخلي عبر CSS، بينما هذا الأسلوب يمنحنا زراً
+             مطابقاً تماماً لحجم بقية الأزرار بلا أي حيل -->
         <button type="button" class="btn-telegram" id="btnTelegramLogin">
           <svg class="tg-logo" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
             <circle cx="120" cy="120" r="120" fill="#ffffff"/>
@@ -729,7 +767,7 @@ audio { display: block; width: 100%; margin-top: 4px; }
       </div>
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <!-- ✅ زر إعادة المحاولة — يظهر دائماً حتى يبقى للمستخدم مخرج واضح -->
-        <button type="button" class="err-retry-btn" id="btnRetry" onclick="handleRetryClick()">
+        <button type="button" class="err-retry-btn" id="btnRetry" onclick="resetToUpload()">
           <i class="fa-solid fa-rotate-right"></i> المحاولة مرة أخرى
         </button>
         <a href="/pricing" id="btnSubscribeErr"
@@ -879,10 +917,23 @@ audio { display: block; width: 100%; margin-top: 4px; }
 </div><!-- /modal -->
 
 <script>
+/* ══════════════════════════════════════
+   ✅ استلام التوكن من URL fragment بعد العودة من OAuth
+   (Google / Telegram / GitHub) — بعض المتصفحات (Safari ITP، Chrome
+   Privacy Sandbox) كتحجب كوكيز الطرف الثالث (third-party
+   cookies) بين دومين الباك أند ودومين الفرونت إند، فكيبقى
+   /get_user_info يرجع 401 رغم نجاح تسجيل الدخول فعلياً.
+   الحل: الباك أند كيبعث التوكن أيضاً عبر #auth_token=... فرابط
+   التوجيه، ونقراه هنا ونخزنو فـ sessionStorage، ونبعتوه بعد
+   ذلك كـ Authorization: Bearer مع كل طلب محمي — بلا الاعتماد
+   الكلي على الكوكي.
+══════════════════════════════════════ */
 (function pickUpTokenFromHash() {
   const m = location.hash.match(/auth_token=([^&]+)/);
   if (m) {
     try { sessionStorage.setItem('lt_bearer', decodeURIComponent(m[1])); } catch (e) {}
+    // ✅ نمسحو التوكن من شريط العنوان فوراً بعد قراءته — باش ما يبقاش
+    // ظاهراً فـ التاريخ (history) ولا قابل للمشاركة عن طريق الخطأ
     history.replaceState(null, '', location.pathname + location.search);
   }
 })();
@@ -893,9 +944,37 @@ function authHeaders() {
   return t ? { 'Authorization': 'Bearer ' + t } : {};
 }
 
+/* ══════════════════════════════════════
+   إعداد روابط تسجيل الدخول (OAuth) — Google و GitHub
+   ✅ التوكن فـ httpOnly Cookie كخط دفاع أول، وفـ sessionStorage
+   (عبر authHeaders أعلاه) كخط دفاع ثاني إلا كانت الكوكيز محجوبة
+══════════════════════════════════════ */
 document.getElementById('btnGoogleLogin').href = `${CONFIG.API}/auth/google`;
 document.getElementById('btnGithubLogin').href = `${CONFIG.API}/auth/github`;
 
+/* ══════════════════════════════════════
+   ✅ Telegram Login — زر مخصص بالكامل (نفس تصميم Google/GitHub تماماً)
+   بدل الويدجت التلقائي من Telegram (iframe)، لأن ذلك الـ iframe لا يمكن
+   تكبير رسمه الداخلي عبر CSS مهما فعلنا بالصندوق الخارجي.
+
+   الأسلوب هنا: نُحمّل سكربت Telegram الرسمي (telegram-widget.js) بشكل
+   عادي فقط لتوفير الدالة البرمجية Telegram.Login.auth() — دون أي
+   data-telegram-login تُنشئ iframe مرئياً. ثم عند الضغط على زرنا
+   المخصص، نستدعي تلك الدالة مباشرة، فتفتح نافذة تسجيل دخول Telegram
+   الرسمية (popup صغير)، وتُعيد لنا بيانات المستخدم (id, hash, ...)
+   عبر callback في المتصفح مباشرة.
+
+   بعدها نُمرّر هذه البيانات كـ query params إلى نفس نقطة الباك إند
+   الموجودة أصلاً (/auth/telegram/callback) عبر تحويل كامل للصفحة —
+   تماماً كما لو أن Telegram نفسه أعاد التوجيه إليها — فيتحقق الباك إند
+   من الـ hash ويُصدر JWT ويعيد التوجيه للفرونت إند بنفس آلية
+   #auth_token الموجودة أعلاه، دون أي تعديل في الباك إند.
+
+   bot_id هنا رقم عام غير سرّي (بخلاف توكن البوت) — لا علاقة له بالأمان.
+══════════════════════════════════════ */
+// ✅ يجب أن يكون bot_id رقماً (Number) وليس نصاً — مكتبة Telegram
+// الداخلية تتحقق من النوع، وتفشل بخطأ "bot_id required" لو كان نصاً
+// حتى لو ظهر الرقم صحيحاً داخل رابط النافذة المنبثقة
 const TELEGRAM_BOT_ID = 8866235667;
 
 (function loadTelegramLoginScript() {
@@ -907,10 +986,13 @@ const TELEGRAM_BOT_ID = 8866235667;
 
 function handleTelegramAuth(user) {
   if (!user) {
+    // المستخدم أغلق نافذة تسجيل الدخول أو ألغى العملية — لا شيء نفعله
     return;
   }
   const params = new URLSearchParams();
   Object.keys(user).forEach((k) => params.append(k, user[k]));
+  // ✅ تحويل كامل للصفحة إلى نفس نقطة الباك إند الموجودة أصلاً،
+  // تماماً بنفس الطريقة التي يستخدمها الويدجت التلقائي عادة
   window.location.href = `${CONFIG.API}/auth/telegram/callback?${params.toString()}`;
 }
 
@@ -925,10 +1007,18 @@ document.getElementById('btnTelegramLogin').addEventListener('click', function (
   }
 });
 
+/* ══════════════════════════════════════
+   ثوابت فحص الملف
+   (فحص العميل هنا للـ UX فقط — الفحص الفعلي
+   والملزم أمنياً يتم في السيرفر دوماً)
+══════════════════════════════════════ */
 const MAX_DURATION_SEC = 60;
 const MAX_SIZE_MB      = 20;
 const ALLOWED_TYPES    = ['audio/mpeg','audio/wav','audio/webm','audio/acc','audio/mp4','audio/ogg','audio/x-m4a','audio/m4a'];
 
+/* ══════════════════════════════════════
+   دوال مساعدة للـ UI
+══════════════════════════════════════ */
 function setLabelState(state, nameText, chipText, msgText) {
   const label = document.getElementById('fileLabel');
   const icon  = document.getElementById('fileIcon');
@@ -942,6 +1032,7 @@ function setLabelState(state, nameText, chipText, msgText) {
   chip.classList.remove('valid','invalid','checking');
   msg.classList.remove('valid','invalid');
 
+  // ✅ استخدام textContent (وليس innerHTML) لمنع أي حقن عبر اسم الملف
   name.textContent = nameText;
 
   if (state === 'idle') {
@@ -985,6 +1076,9 @@ function setLabelState(state, nameText, chipText, msgText) {
   }
 }
 
+/* ══════════════════════════════════════
+   فحص الملف فور اختياره (UX فقط)
+══════════════════════════════════════ */
 document.getElementById('fileInput').addEventListener('change', function(e) {
   const file = e.target.files[0];
 
@@ -1044,18 +1138,33 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
   audio.addEventListener('error', (e) => {
     console.warn('audio metadata error:', e);
     URL.revokeObjectURL(objUrl);
+    // الملف يُقبل محلياً، لكن السيرفر سيرفضه إن لم يكن صوتاً صالحاً فعلاً
     setLabelState('valid', file.name, '', 'الملف صالح — اضغط "ابدأ المقارنة" للمتابعة');
   });
 
   audio.load();
 });
 
+/* ══════════════════════════════════════
+   فحص حالة تسجيل الدخول عند التحميل
+   ✅ يبدّل بين قسم تسجيل الدخول ولوحة رفع الملف
+   ✅ يتحكم في ظهور/إخفاء زر "اشترك الآن":
+      - يظهر لغير المسجّلين (لا نعرف حالتهم بعد)
+      - يظهر لمن ليست لديه خطة، أو خطته المجانية فقط، أو نفدت محاولاته
+      - يختفي فقط لمن لديه خطة مدفوعة (plan غير 'free' وغير فارغة) ورصيد متبقٍّ > 0
+══════════════════════════════════════ */
+// ✅ نبدأ بنفس القيمة التي اعتمدها كلاس <html> المخزّن مسبقاً من localStorage
+// (أعلى الصفحة)، حتى تبقى setLabelState('idle', ...) متسقة مع ما هو ظاهر
+// فعلاً منذ أول رسم للصفحة، بدل الافتراض دائماً أن الاشتراك مطلوب.
 window.idleLabel = document.documentElement.classList.contains('upload-ready')
   ? 'ارفع صوتك لمدة 20 ثانية'
   : 'ارفع ملفاً (يتطلب اشتراك)';
 
 function updateSubscribeButton(user) {
   const html = document.documentElement;
+  // ✅ غير مسجل دخول = لا يظهر الزر إطلاقاً (حسب الطلب)
+  // مسجل دخول بدون خطة مدفوعة نشطة = يظهر الزر
+  // مسجل دخول بخطة مدفوعة نشطة (remaining > 0) = لا يظهر
   let shouldShow = false;
   if (user) {
     const hasActivePaidPlan = !!user.plan && user.plan !== 'free' && user.remaining > 0;
@@ -1072,17 +1181,21 @@ async function checkUserStatus() {
   try {
     const res = await fetch(`${CONFIG.API}/get_user_info`, {
       credentials: 'include',
-      headers: authHeaders(),
+      headers: authHeaders(),   // ✅ إضافة جديدة — احتياط لحالة حجب third-party cookies
     });
     const data = await res.json();
 
     if (data.status === "ok" && data.user) {
+      // مستخدم مسجّل الدخول — يظهر حقل رفع الصوت فوراً بلا وميض
       html.classList.remove('auth-out');
       html.classList.add('auth-in');
       try { localStorage.setItem('lt_auth', 'in'); } catch (e) {}
 
       updateSubscribeButton(data.user);
 
+      // ✅ تحديث نص حقل الرفع الافتراضي + تخزين الحالة في localStorage
+      // كي يظهر النص الصحيح مباشرة (بلا وميض) في المرة القادمة التي
+      // يُعاد فيها تحميل الصفحة، بدل انتظار استجابة هذا الطلب من جديد.
       const canUpload = data.user.remaining > 0;
       window.idleLabel = canUpload ? 'ارفع صوتك لمدة 20 ثانية' : 'ارفع ملفاً (يتطلب اشتراك)';
       html.classList.remove('upload-ready', 'upload-locked');
@@ -1097,16 +1210,21 @@ async function checkUserStatus() {
     }
   } catch (e) { /* نتجاهل الخطأ — نعتبر المستخدم غير مسجل */ }
 
+  // مستخدم غير مسجل الدخول — يظهر قسم تسجيل الدخول وزر الاشتراك
   html.classList.remove('auth-in');
   html.classList.add('auth-out');
   try { localStorage.setItem('lt_auth', 'out'); } catch (e) {}
   updateSubscribeButton(null);
 
+  // ✅ غير مسجل الدخول = لا يمكن أن يكون رفع الملف "جاهزاً"
   html.classList.remove('upload-ready');
   html.classList.add('upload-locked');
   try { localStorage.setItem('lt_upload', 'locked'); } catch (e) {}
 }
 
+/* ══════════════════════════════════════
+   زر الإلغاء
+══════════════════════════════════════ */
 let ctrl = null, busy = false;
 
 document.getElementById('btnStop').onclick = () => {
@@ -1115,15 +1233,18 @@ document.getElementById('btnStop').onclick = () => {
   document.getElementById('fileInput').value = '';
   setLabelState('idle', window.idleLabel);
   view('hero');
-  clearScanState();
 };
 
+/* ══════════════════════════════════════
+   دوال العرض
+══════════════════════════════════════ */
 function view(v) {
   document.getElementById('vHero').classList.toggle('off', v !== 'hero');
   document.getElementById('vLoad').classList.toggle('on',  v === 'load');
   document.getElementById('vErr').classList.toggle('on',   v === 'err');
   document.getElementById('vRes').classList.toggle('on',   v === 'res');
 
+  // ✅ الزر العائم "تحليل جديد" يظهر فقط عند وجود نتائج أو خطأ سابق
   const fab = document.getElementById('fabNewScan');
   if (fab) fab.classList.toggle('show', v === 'res' || v === 'err');
 }
@@ -1131,181 +1252,48 @@ function view(v) {
 function setBusy(on) {
   busy = on;
   const goBtn = document.getElementById('btnGo');
-  goBtn.disabled = on;
-  goBtn.style.pointerEvents = on ? 'none' : '';
+  goBtn.disabled = on;                       // ✅ يمنع الضغط المتكرر فعلياً (إضافة لمتغير busy)
+  goBtn.style.pointerEvents = on ? 'none' : ''; // طبقة حماية إضافية ضد النقر السريع المتكرر
   document.getElementById('btnStop').style.display = on ? 'inline-block' : 'none';
 }
 
 function aurl(u) { return u && u.startsWith('http') ? u : location.origin + u; }
 
-const SCAN_STATE_KEY = 'lt_scan';
-const SCAN_MAX_AGE_MS = 3 * 60 * 1000; // 3 دقائق
-
-function saveScanState(obj) {
-  try { sessionStorage.setItem(SCAN_STATE_KEY, JSON.stringify(obj)); } catch (e) {}
-}
-function loadScanState() {
-  try {
-    const raw = sessionStorage.getItem(SCAN_STATE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch (e) { return null; }
-}
-function clearScanState() {
-  try { sessionStorage.removeItem(SCAN_STATE_KEY); } catch (e) {}
-  idbDeleteFile();
-}
-
 /* ══════════════════════════════════════
-   ✅ تخزين الملف الصوتي نفسه عبر IndexedDB (بدل sessionStorage+base64)
-   الطريقة القديمة كانت تحوّل الملف إلى base64 عبر FileReader ثم تخزّنه
-   كنص داخل sessionStorage، ثم عند العودة تعيد بناءه عبر fetch(dataURL).
-   هذا كان يفشل بصمت في حالات كثيرة: sessionStorage محدود المساحة
-   (~5-10MB)، وأي محاولة تخزين نص base64 أكبر من الحد تفشل بصمت (catch
-   فارغ) فيضيع الملف دون إشعار؛ وكانت هناك فجوة زمنية (FileReader غير
-   متزامن) قد تجعل الملف غير محفوظ إذا غادر المستخدم بسرعة؛ وإعادة
-   البناء عبر fetch(dataURL) خطوة إضافية عرضة للفشل — وهي بالضبط ما كان
-   يُنتج رسالة "فشل الاتصال بالخادم" رغم أن المشكلة لم تكن في الخادم
-   بل في إعادة بناء الملف محلياً قبل حتى إرساله.
-   IndexedDB مصمم أصلاً لتخزين Blobs كبيرة بمساحة أكبر بكثير، يحتفظ
-   بالملف كما هو دون أي تحويل نصي، ويبقى محفوظاً عبر التنقل بين صفحات
-   نفس الموقع، ونمسحه يدوياً بعد كل استخدام (انظر idbDeleteFile).
+   ✅ إعادة الضبط الكاملة لبدء تحليل جديد
+   بدون إعادة تحميل الصفحة: تُصفّر الملف المختار،
+   وتُفرغ النتائج القديمة من الذاكرة والـ DOM،
+   وتُعيد عرض واجهة الرفع من جديد.
 ══════════════════════════════════════ */
-const IDB_NAME  = 'liketwin_resume';
-const IDB_STORE = 'files';
-const IDB_KEY   = 'pending_file';
-
-function idbOpen() {
-  return new Promise((resolve, reject) => {
-    if (!('indexedDB' in window)) { reject(new Error('IndexedDB غير مدعوم')); return; }
-    const req = indexedDB.open(IDB_NAME, 1);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function idbSetFile(file) {
-  try {
-    const db = await idbOpen();
-    await new Promise((resolve, reject) => {
-      const tx = db.transaction(IDB_STORE, 'readwrite');
-      tx.objectStore(IDB_STORE).put({ blob: file, name: file.name, type: file.type, ts: Date.now() }, IDB_KEY);
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
-    db.close();
-  } catch (e) { /* تجاهل — سيبقى الاستئناف غير متاح إن فشل التخزين فقط */ }
-}
-
-async function idbGetFile() {
-  try {
-    const db = await idbOpen();
-    const result = await new Promise((resolve, reject) => {
-      const tx = db.transaction(IDB_STORE, 'readonly');
-      const req = tx.objectStore(IDB_STORE).get(IDB_KEY);
-      req.onsuccess = () => resolve(req.result || null);
-      req.onerror = () => reject(req.error);
-    });
-    db.close();
-    return result;
-  } catch (e) { return null; }
-}
-
-async function idbDeleteFile() {
-  try {
-    const db = await idbOpen();
-    await new Promise((resolve) => {
-      const tx = db.transaction(IDB_STORE, 'readwrite');
-      tx.objectStore(IDB_STORE).delete(IDB_KEY);
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => resolve();
-    });
-    db.close();
-  } catch (e) { /* تجاهل */ }
-}
-
-function persistLoadingState(file) {
-  // ✅ نحفظ فقط علامة "جاري التحليل" + الوقت في sessionStorage (خفيف
-  // وفوري)، والملف الفعلي يُخزَّن بالتوازي عبر idbSetFile في IndexedDB
-  saveScanState({ v: 'load', ts: Date.now() });
-}
-
-async function restoreScanState() {
-  const st = loadScanState();
-  if (!st) return;
-
-  if (!st.ts || (Date.now() - st.ts) > SCAN_MAX_AGE_MS) {
-    clearScanState();
-    return;
-  }
-
-  if (st.v === 'res' && Array.isArray(st.readers)) {
-    // ✅ استعادة نتائج سابقة كما هي بلا أي طلب شبكة جديد
-    window.lastReaders = st.readers;
-    document.getElementById('readersBody').innerHTML = st.readers.map(readerCard).join('');
-    document.getElementById('readersCount').textContent = st.readers.length + ' قارئ';
-    document.getElementById('shareBody').innerHTML = buildSharePanel(st.readers);
-    document.getElementById('headCopyBtns').classList.add('visible');
-    view('res');
-    warmUpResultAudios();
-    return;
-  }
-
-  if (st.v === 'err') {
-    document.getElementById('errMsg').textContent = st.errMsg || 'حدث خطأ.';
-    document.getElementById('btnSubscribeErr').style.display = st.showSub ? 'inline-block' : 'none';
-    view('err');
-    return;
-  }
-
-  if (st.v === 'load') {
-    // ✅ كان المستخدم في وضع "جاري التحليل" قبل مغادرته الصفحة. مغادرة
-    // الصفحة (تنقّل كامل) تُلغي أي طلب fetch كان قيد التنفيذ فعلياً،
-    // فلا سبيل لاستئنافه فعلياً سوى إعادة إرسال نفس الملف من جديد.
-    view('load'); // نعرض شاشة التحميل فوراً بدل الوميض على واجهة الرفع الفارغة
-    const rec = await idbGetFile();
-    if (rec && rec.blob) {
-      const file = new File([rec.blob], rec.name || 'audio', { type: rec.type || rec.blob.type || 'audio/mpeg' });
-      runAnalysis(file);
-    } else {
-      // لم نتمكن من استرجاع الملف (IndexedDB غير مدعوم أو تم مسحه) —
-      // لا يمكننا استئناف التحليل، فنعرض رسالة واضحة بدل تعليق شاشة
-      // "جاري التحليل" إلى الأبد
-      clearScanState();
-      document.getElementById('errMsg').textContent = 'انتهت الجلسة أثناء التحليل، الرجاء رفع الملف والمحاولة مجدداً.';
-      document.getElementById('btnSubscribeErr').style.display = 'none';
-      view('err');
-    }
-  }
-}
-
 function resetToUpload() {
   if (ctrl) { try { ctrl.abort(); } catch (e) {} }
   setBusy(false);
 
+  // تصفير حقل الملف وحالته البصرية
   const fileInput = document.getElementById('fileInput');
   fileInput.value = '';
   setLabelState('idle', window.idleLabel);
 
+  // تفريغ النتائج القديمة من الذاكرة والـ DOM
   window.lastReaders = [];
   document.getElementById('readersBody').innerHTML = '';
   document.getElementById('shareBody').innerHTML = '';
   document.getElementById('readersCount').textContent = '';
   document.getElementById('headCopyBtns').classList.remove('visible');
 
+  // إغلاق نافذة المشاركة إن كانت مفتوحة
   closeShareModal();
 
+  // ✅ فصل مراقب التحميل الاستباقي القديم لتفادي أي تسرّب ذاكرة
   if (audioWarmObserver) { try { audioWarmObserver.disconnect(); } catch (e) {} audioWarmObserver = null; }
-
-  clearScanState();
 
   view('hero');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+/* ══════════════════════════════════════
+   نصوص النسخ والمشاركة
+══════════════════════════════════════ */
 function buildCopyText(readers) {
   const medals = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
   const lines = readers.slice(0, 10).map((r, i) =>
@@ -1322,6 +1310,10 @@ function buildShareText(readers) {
   return `🎧 طلع أقرب صوت يشبهني هو ${top.name} بنسبة ${top.percent.toFixed(1)}% 😳\n\nوهذه باقي النتائج 👇\n\n${others}\n\nالموقع يحلل صوتك ويقارنه مع أكثر من 500 قارئ 🔥\n\nجرّب صوتك:\nhttps://liketwin.com`;
 }
 
+/* ══════════════════════════════════════
+   لوحة المشاركة
+   ✅ كل الحقول الديناميكية (الاسم) تمر عبر esc()
+══════════════════════════════════════ */
 function buildSharePanel(readers) {
   const cards = readers.slice(0, 10).map((r, i) => `
     <div class="share-reader-card">
@@ -1336,6 +1328,9 @@ function buildSharePanel(readers) {
   return `<div class="share-panel">${cards}</div>`;
 }
 
+/* ══════════════════════════════════════
+   نسخ النتائج (هيدر)
+══════════════════════════════════════ */
 function copyResult() {
   const text = buildCopyText(window.lastReaders || []);
   navigator.clipboard.writeText(text).then(() => {
@@ -1349,10 +1344,14 @@ function copyResult() {
   });
 }
 
+/* ══════════════════════════════════════
+   نافذة المشاركة
+══════════════════════════════════════ */
 function openShareModal() {
   const readers = window.lastReaders || [];
   if (!readers.length) return;
   const text = buildShareText(readers);
+  // ✅ textContent — لا innerHTML — يمنع أي حقن مهما كانت أسماء القرّاء
   document.getElementById('modalShareText').textContent = text;
   const cpBtn = document.getElementById('modalCopyBtn');
   cpBtn.classList.remove('done');
@@ -1388,6 +1387,7 @@ function copyModalText() {
 }
 
 async function shareTo(platform) {
+  // ✅ Whitelist صريح يمنع أي قيمة غير متوقعة حتى لو تم التلاعب بـ DOM
   const ALLOWED_PLATFORMS = ['whatsapp', 'facebook', 'telegram', 'twitter', 'instagram', 'tiktok'];
   if (!ALLOWED_PLATFORMS.includes(platform)) return;
 
@@ -1404,6 +1404,7 @@ async function shareTo(platform) {
     tiktok   : null,
   };
   if (links[platform]) {
+    // ✅ noopener,noreferrer يمنع window.opener hijacking
     window.open(links[platform], '_blank', 'noopener,noreferrer,width=600,height=520');
   } else {
     showCopiedHint(platform);
@@ -1414,7 +1415,7 @@ function showCopiedHint(platform) {
   const names = { instagram: 'إنستغرام', tiktok: 'تيك توك' };
   const footer = document.querySelector('.modal-footer');
   const original = footer.textContent;
-  const platformLabel = names[platform] || '';
+  const platformLabel = names[platform] || ''; // ✅ تجنّب عرض 'undefined'
   footer.style.color = '#48bb78';
   footer.textContent = platformLabel
     ? `✅ تم نسخ النص — افتح ${platformLabel} والصقه`
@@ -1425,30 +1426,50 @@ function showCopiedHint(platform) {
   }, 3000);
 }
 
+/* ══════════════════════════════════════
+   كارد القارئ
+══════════════════════════════════════ */
 function esc(str) {
   const d = document.createElement('div');
   d.textContent = String(str);
   return d.innerHTML;
 }
 
+/* ✅ تشديد الفحص لمنع Path Traversal:
+   - يجب أن يبدأ المسار حرفياً بـ "/audio/"
+   - يُمنع أي ظهور لتسلسل ".." في أي مكان بالمسار
+   - يُمنع أي محرف خارج [حروف/أرقام/شرطة سفلية/شرطة/نقطة واحدة فاصلة للامتداد]
+*/
 function safeAudioUrl(u) {
   if (!u || typeof u !== 'string') return '';
-  if (u.includes('..')) return '';
-  if (!/^\/audio\/[\w-]+\.(wav|mp3|m4a|mp4|aac|ogg|webm)$/i.test(u)) return '';
+  if (u.includes('..')) return '';                      // 🔒 يمنع Path Traversal
+  if (!/^\/audio\/[\w-]+\.(wav|mp3|m4a|mp4|aac|ogg|webm)$/i.test(u)) return ''; // 🔒 نمط صارم: اسم ملف + امتداد صوتي فقط
   return u;
 }
 
+/* ══════════════════════════════════════
+   ✅ تحميل استباقي "ذكي" لمقاطع النتائج
+   بدل تحميل كل المقاطع دفعة واحدة (كان يُنتج ازدحاماً
+   على قناة الاتصال لأن المتصفح يسمح بعدد محدود من
+   الاتصالات المتزامنة لكل نطاق، فتتأخر كل الملفات معاً)،
+   نُحمّل مسبقاً فقط:
+   1) المقاطع الظاهرة فعلياً على الشاشة (IntersectionObserver)
+   2) أو المقطع الذي يُمرّر المستخدم الماوس فوقه (نية تشغيل واضحة)
+   بهذا نمنح الأولوية للمقطع المطلوب فعلاً بدل مزاحمته
+   بعشرات الطلبات غير الضرورية.
+══════════════════════════════════════ */
 let audioWarmObserver = null;
 
 function warmUpAudioEl(a) {
   if (!a || a.dataset.warmed === '1') return;
+  // نتجاهل التحميل إن كان المستخدم مشغّلاً صوتاً حالياً حتى لا نزاحمه على القناة
   const anyPlaying = document.querySelector('audio:not([paused])');
   if (anyPlaying && anyPlaying !== a) return;
   try {
     a.preload = 'auto';
     a.load();
     a.dataset.warmed = '1';
-  } catch (e) {}
+  } catch (e) { /* تجاهل أي متصفح لا يدعم load() بهذا الشكل */ }
 }
 
 function warmUpResultAudios() {
@@ -1456,8 +1477,10 @@ function warmUpResultAudios() {
     const audios = document.querySelectorAll('#readersBody audio');
     if (!audios.length) return;
 
+    // تحميل فوري لأول مقطعين فقط (الأعلى تطابقاً) — الأكثر ترجيحاً للاستماع
     audios.forEach((a, i) => { if (i < 2) warmUpAudioEl(a); });
 
+    // تحميل الباقي فقط عند دخوله فعلياً في نطاق الرؤية
     if (audioWarmObserver) audioWarmObserver.disconnect();
     if ('IntersectionObserver' in window) {
       audioWarmObserver = new IntersectionObserver((entries) => {
@@ -1468,6 +1491,7 @@ function warmUpResultAudios() {
       audios.forEach((a) => audioWarmObserver.observe(a));
     }
 
+    // تحميل فوري عند مرور الماوس/اللمس فوق المقطع — نية تشغيل واضحة
     audios.forEach((a) => {
       a.addEventListener('pointerenter', () => warmUpAudioEl(a), { once: true });
     });
@@ -1505,22 +1529,27 @@ function readerCard(item) {
     </div>`;
 }
 
+/* ══════════════════════════════════════
+   ✅ منع تشغيل أكثر من مقطع صوتي واحد في نفس الوقت
+   (event delegation لأن عناصر <audio> تُنشأ ديناميكياً)
+══════════════════════════════════════ */
 document.addEventListener('play', function (e) {
   if (e.target.tagName !== 'AUDIO') return;
   document.querySelectorAll('audio').forEach(function (a) {
     if (a !== e.target && !a.paused) a.pause();
   });
-}, true);
+}, true); // ✅ capture:true ضروري لأن حدث play لا ينتشر (bubble) في DOM
 
-async function runAnalysis(file) {
+/* ══════════════════════════════════════
+   الزر الرئيسي — رفع ومعالجة
+══════════════════════════════════════ */
+document.getElementById('btnGo').onclick = async () => {
+  const file = document.getElementById('fileInput').files[0];
   if (!file || busy) return;
 
   setBusy(true);
   ctrl = new AbortController();
   view('load');
-
-  persistLoadingState(file);
-  idbSetFile(file);
 
   const fd = new FormData();
   fd.append('file', file);
@@ -1531,7 +1560,7 @@ async function runAnalysis(file) {
       body: fd,
       signal: ctrl.signal,
       credentials: 'include',
-      headers: authHeaders(),
+      headers: authHeaders(),   // ✅ إضافة جديدة — احتياط لحالة حجب third-party cookies
     });
 
     const data = await res.json();
@@ -1539,14 +1568,13 @@ async function runAnalysis(file) {
 
     if (data.status !== 'success') {
       const msg = data.message || 'حدث خطأ غير متوقع';
-      const subMsgs = ['يجب الاشتراك', 'لا توجد خطة نشطة', 'انتهت المحاولات'];
-      const showSub = subMsgs.includes(msg);
       document.getElementById('errMsg').textContent = msg;
-      document.getElementById('btnSubscribeErr').style.display = showSub ? 'inline-block' : 'none';
+      const subMsgs = ['يجب الاشتراك', 'لا توجد خطة نشطة', 'انتهت المحاولات'];
+      document.getElementById('btnSubscribeErr').style.display = subMsgs.includes(msg) ? 'inline-block' : 'none';
       view('err');
-      saveScanState({ v: 'err', ts: Date.now(), errMsg: msg, showSub });
-      idbDeleteFile();
-      if (showSub) {
+      // ✅ إن ظهر خطأ يفيد أن الخطة انتهت/غير موجودة، نعيد إظهار زر الاشتراك فوراً
+      // (المستخدم مسجل دخول أصلاً وإلا ما كان وصل لهنا، فنمرر user فاضي الخطة)
+      if (subMsgs.includes(msg)) {
         updateSubscribeButton({ plan: null, remaining: 0 });
       }
       return;
@@ -1560,11 +1588,12 @@ async function runAnalysis(file) {
     document.getElementById('shareBody').innerHTML = buildSharePanel(readers);
     document.getElementById('headCopyBtns').classList.add('visible');
     view('res');
-    saveScanState({ v: 'res', ts: Date.now(), readers });
-    idbDeleteFile();
 
+    // ✅ تشغيل التحميل الاستباقي لكل مقاطع النتائج فور عرضها
     warmUpResultAudios();
 
+    // ✅ بعد كل مقارنة ناجحة، نحدّث حالة الزر لأن الرصيد المتبقي تغيّر
+    // (data.remaining يرجع من نفس استجابة /compare_audio)
     if (typeof data.remaining === 'number') {
       const currentPlanGuess = { plan: window.lastKnownPlan, remaining: data.remaining };
       updateSubscribeButton(currentPlanGuess);
@@ -1573,40 +1602,13 @@ async function runAnalysis(file) {
   } catch (e) {
     setBusy(false);
     if (e.name !== 'AbortError') {
-      // ✅ فشل اتصال حقيقي (لا علاقة له بالملف نفسه) — نُبقي الملف محفوظاً
-      // في IndexedDB عمداً كي يستطيع زر "المحاولة مرة أخرى" إعادة إرساله
-      // فوراً دون أن يُضطر المستخدم لرفعه من جديد
-      const msg = 'فشل الاتصال بالخادم، حاول مجدداً.';
-      document.getElementById('errMsg').textContent = msg;
+      document.getElementById('errMsg').textContent = 'فشل الاتصال بالخادم، حاول مجدداً.';
       view('err');
-      saveScanState({ v: 'err', ts: Date.now(), errMsg: msg, showSub: false });
-    } else {
-      // ✅ طلب أُلغي فعلياً (مثلاً عبر زر الإلغاء) — لا داعي لحفظ أي حالة
-      clearScanState();
     }
   }
-}
-
-document.getElementById('btnGo').onclick = () => {
-  const file = document.getElementById('fileInput').files[0];
-  runAnalysis(file);
 };
 
-async function handleRetryClick() {
-  // ✅ إذا كان الملف الأخير لا يزال محفوظاً في IndexedDB (فشل اتصال
-  // عابر مثلاً)، نعيد إرساله مباشرة بدل إجبار المستخدم على رفعه من
-  // جديد. إن لم يوجد ملف محفوظ (خطأ من السيرفر لسبب آخر، أو انتهت
-  // صلاحية الجلسة)، نعود لواجهة الرفع العادية.
-  const rec = await idbGetFile();
-  if (rec && rec.blob) {
-    const file = new File([rec.blob], rec.name || 'audio', { type: rec.type || rec.blob.type || 'audio/mpeg' });
-    view('load');
-    runAnalysis(file);
-  } else {
-    resetToUpload();
-  }
-}
-
+// نحفظ الخطة الحالية لإعادة استخدامها بعد كل مقارنة (انظر أعلاه)
 (function trackPlan() {
   const originalUpdate = updateSubscribeButton;
   window.updateSubscribeButton = function(user) {
@@ -1616,7 +1618,6 @@ async function handleRetryClick() {
 })();
 
 checkUserStatus();
-restoreScanState();
 </script>
 
 <footer class="footer">
