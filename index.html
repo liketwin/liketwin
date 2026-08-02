@@ -1233,6 +1233,8 @@ document.getElementById('btnStop').onclick = () => {
   document.getElementById('fileInput').value = '';
   setLabelState('idle', window.idleLabel);
   view('hero');
+  // ✅ المستخدم ألغى العملية بنفسه — لا داعي لحفظ حالة "جاري التحليل"
+  clearScanState();
 };
 
 /* ══════════════════════════════════════
@@ -1258,6 +1260,115 @@ function setBusy(on) {
 }
 
 function aurl(u) { return u && u.startsWith('http') ? u : location.origin + u; }
+
+/* ══════════════════════════════════════
+   ✅ حفظ/استرجاع حالة التحليل عبر sessionStorage
+   المشكلة: الانتقال لصفحة أخرى (لوحتي، الأسعار) هو تنقّل كامل بين
+   صفحات، فيُنهي المتصفح تنفيذ الجافاسكريبت ويُلغي أي طلب شبكة قيد
+   التنفيذ (fetch) تلقائياً. فإذا كان المستخدم في وضع "جاري التحليل"
+   أو يشاهد نتائج/خطأ ثم غادر وعاد، كانت الصفحة تُعاد من الصفر لواجهة
+   الرفع الفارغة وكأن شيئاً لم يحدث.
+   الحل: نخزّن آخر حالة معروفة (نتائج/خطأ/جاري التحليل + الملف نفسه إن
+   كان صغيراً بما يكفي) في sessionStorage (يبقى محفوظاً عبر التنقل بين
+   الصفحات في نفس التبويب، ويُمسح تلقائياً عند إغلاقه). عند إعادة فتح
+   صفحة التحليل، نتحقق من هذه الحالة:
+   - نتائج/خطأ محفوظان → نعرضهما مباشرة بلا أي طلب جديد.
+   - "جاري التحليل" مع ملف محفوظ → نعيد بناء نفس الملف ونُطلق نفس طلب
+     المقارنة تلقائياً من جديد (لأن الطلب الأصلي أُلغي فعلياً عند
+     مغادرة الصفحة، فلا سبيل لـ"استئنافه" فعلياً سوى إعادة إرساله).
+   - حالة قديمة جداً (أكثر من 3 دقائق) → نتجاهلها احترازاً، لأن الخادم
+     غالباً يكون قد انتهى من معالجتها أو انتهت صلاحيتها.
+══════════════════════════════════════ */
+const SCAN_STATE_KEY = 'lt_scan';
+const SCAN_MAX_AGE_MS = 3 * 60 * 1000; // 3 دقائق
+const SCAN_MAX_FILE_MB_FOR_RESUME = 8; // فوق هذا الحجم لا نخزّن الملف نفسه (حدود سعة sessionStorage)
+
+function saveScanState(obj) {
+  try { sessionStorage.setItem(SCAN_STATE_KEY, JSON.stringify(obj)); } catch (e) { /* تجاهل: مساحة التخزين ممتلئة أو غير متاحة */ }
+}
+function loadScanState() {
+  try {
+    const raw = sessionStorage.getItem(SCAN_STATE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+function clearScanState() {
+  try { sessionStorage.removeItem(SCAN_STATE_KEY); } catch (e) {}
+}
+
+function persistLoadingState(file) {
+  // نحفظ حالة "جاري التحليل" فوراً (بلا الملف)، ثم نستكمل — بشكل غير
+  // متزامن ودون تعطيل طلب المقارنة الأصلي — بإضافة بيانات الملف نفسه
+  // إن كان حجمه معقولاً، لتمكين الاستئناف التلقائي لاحقاً.
+  saveScanState({ v: 'load', ts: Date.now() });
+
+  if (!file || file.size > SCAN_MAX_FILE_MB_FOR_RESUME * 1024 * 1024) return;
+
+  try {
+    const reader = new FileReader();
+    reader.onload = () => {
+      saveScanState({
+        v: 'load',
+        ts: Date.now(),
+        fileB64: reader.result,
+        fileType: file.type,
+        fileName: file.name,
+      });
+    };
+    reader.readAsDataURL(file);
+  } catch (e) { /* تجاهل — تبقى حالة "جاري التحليل" محفوظة بلا الملف */ }
+}
+
+function restoreScanState() {
+  const st = loadScanState();
+  if (!st) return;
+
+  if (!st.ts || (Date.now() - st.ts) > SCAN_MAX_AGE_MS) {
+    clearScanState();
+    return;
+  }
+
+  if (st.v === 'res' && Array.isArray(st.readers)) {
+    // ✅ استعادة نتائج سابقة كما هي بلا أي طلب شبكة جديد
+    window.lastReaders = st.readers;
+    document.getElementById('readersBody').innerHTML = st.readers.map(readerCard).join('');
+    document.getElementById('readersCount').textContent = st.readers.length + ' قارئ';
+    document.getElementById('shareBody').innerHTML = buildSharePanel(st.readers);
+    document.getElementById('headCopyBtns').classList.add('visible');
+    view('res');
+    warmUpResultAudios();
+    return;
+  }
+
+  if (st.v === 'err') {
+    document.getElementById('errMsg').textContent = st.errMsg || 'حدث خطأ.';
+    document.getElementById('btnSubscribeErr').style.display = st.showSub ? 'inline-block' : 'none';
+    view('err');
+    return;
+  }
+
+  if (st.v === 'load') {
+    if (st.fileB64) {
+      // ✅ نعيد بناء نفس الملف من البيانات المحفوظة، ونُطلق نفس عملية
+      // التحليل تلقائياً — لأن المستخدم كان بالفعل في وضع "جاري التحليل"
+      // قبل مغادرته الصفحة، ومغادرته لصفحة أخرى وعودته لا تعني أنه ألغى العملية
+      fetch(st.fileB64)
+        .then(r => r.blob())
+        .then(blob => {
+          const file = new File([blob], st.fileName || 'audio', { type: st.fileType || blob.type || 'audio/mpeg' });
+          runAnalysis(file);
+        })
+        .catch(() => clearScanState());
+    } else {
+      // لم يُحفظ الملف (كان كبيراً جداً على sessionStorage) — لا يمكننا
+      // استئناف التحليل فعلياً، فنعرض رسالة واضحة بدل الإيحاء بأنه لا يزال جارياً
+      clearScanState();
+      document.getElementById('errMsg').textContent = 'انتهت الجلسة أثناء التحليل، الرجاء رفع الملف والمحاولة مجدداً.';
+      document.getElementById('btnSubscribeErr').style.display = 'none';
+      view('err');
+    }
+  }
+}
 
 /* ══════════════════════════════════════
    ✅ إعادة الضبط الكاملة لبدء تحليل جديد
@@ -1286,6 +1397,9 @@ function resetToUpload() {
 
   // ✅ فصل مراقب التحميل الاستباقي القديم لتفادي أي تسرّب ذاكرة
   if (audioWarmObserver) { try { audioWarmObserver.disconnect(); } catch (e) {} audioWarmObserver = null; }
+
+  // ✅ إبطال أي حالة محفوظة سابقاً (نتائج/خطأ/تحليل جارٍ) لأننا بدأنا من جديد
+  clearScanState();
 
   view('hero');
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1542,14 +1656,20 @@ document.addEventListener('play', function (e) {
 
 /* ══════════════════════════════════════
    الزر الرئيسي — رفع ومعالجة
+   ✅ استُخرج المنطق إلى دالة runAnalysis(file) مستقلة (بدل أن يكون حصراً
+   داخل onclick) لأن restoreScanState() تحتاج استدعاءها أيضاً تلقائياً
+   عند العودة لصفحة التحليل ووجود ملف محفوظ من جلسة "جاري التحليل" سابقة
 ══════════════════════════════════════ */
-document.getElementById('btnGo').onclick = async () => {
-  const file = document.getElementById('fileInput').files[0];
+async function runAnalysis(file) {
   if (!file || busy) return;
 
   setBusy(true);
   ctrl = new AbortController();
   view('load');
+
+  // ✅ حفظ حالة "جاري التحليل" (+ الملف نفسه إن أمكن) لتُستعاد تلقائياً
+  // إذا غادر المستخدم الصفحة (لوحتي/الأسعار) ثم عاد قبل انتهاء العملية
+  persistLoadingState(file);
 
   const fd = new FormData();
   fd.append('file', file);
@@ -1568,13 +1688,16 @@ document.getElementById('btnGo').onclick = async () => {
 
     if (data.status !== 'success') {
       const msg = data.message || 'حدث خطأ غير متوقع';
-      document.getElementById('errMsg').textContent = msg;
       const subMsgs = ['يجب الاشتراك', 'لا توجد خطة نشطة', 'انتهت المحاولات'];
-      document.getElementById('btnSubscribeErr').style.display = subMsgs.includes(msg) ? 'inline-block' : 'none';
+      const showSub = subMsgs.includes(msg);
+      document.getElementById('errMsg').textContent = msg;
+      document.getElementById('btnSubscribeErr').style.display = showSub ? 'inline-block' : 'none';
       view('err');
+      // ✅ نحفظ حالة الخطأ لتظهر كما هي لو غادر المستخدم الصفحة وعاد إليها
+      saveScanState({ v: 'err', ts: Date.now(), errMsg: msg, showSub });
       // ✅ إن ظهر خطأ يفيد أن الخطة انتهت/غير موجودة، نعيد إظهار زر الاشتراك فوراً
       // (المستخدم مسجل دخول أصلاً وإلا ما كان وصل لهنا، فنمرر user فاضي الخطة)
-      if (subMsgs.includes(msg)) {
+      if (showSub) {
         updateSubscribeButton({ plan: null, remaining: 0 });
       }
       return;
@@ -1588,6 +1711,8 @@ document.getElementById('btnGo').onclick = async () => {
     document.getElementById('shareBody').innerHTML = buildSharePanel(readers);
     document.getElementById('headCopyBtns').classList.add('visible');
     view('res');
+    // ✅ نحفظ النتائج لتظهر مباشرة دون إعادة التحليل لو غادر المستخدم الصفحة وعاد
+    saveScanState({ v: 'res', ts: Date.now(), readers });
 
     // ✅ تشغيل التحميل الاستباقي لكل مقاطع النتائج فور عرضها
     warmUpResultAudios();
@@ -1602,10 +1727,20 @@ document.getElementById('btnGo').onclick = async () => {
   } catch (e) {
     setBusy(false);
     if (e.name !== 'AbortError') {
-      document.getElementById('errMsg').textContent = 'فشل الاتصال بالخادم، حاول مجدداً.';
+      const msg = 'فشل الاتصال بالخادم، حاول مجدداً.';
+      document.getElementById('errMsg').textContent = msg;
       view('err');
+      saveScanState({ v: 'err', ts: Date.now(), errMsg: msg, showSub: false });
+    } else {
+      // ✅ طلب أُلغي (مثلاً عبر زر الإلغاء) — لا داعي لحفظ أي حالة
+      clearScanState();
     }
   }
+}
+
+document.getElementById('btnGo').onclick = () => {
+  const file = document.getElementById('fileInput').files[0];
+  runAnalysis(file);
 };
 
 // نحفظ الخطة الحالية لإعادة استخدامها بعد كل مقارنة (انظر أعلاه)
@@ -1618,6 +1753,11 @@ document.getElementById('btnGo').onclick = async () => {
 })();
 
 checkUserStatus();
+
+// ✅ إذا كان المستخدم قد غادر صفحة التحليل (لصفحة "لوحتي" أو "الأسعار"
+// مثلاً) أثناء وجود تحليل جارٍ أو نتائج أو خطأ ظاهر، نستعيد نفس الحالة
+// هنا بدل عرض واجهة الرفع الفارغة من جديد
+restoreScanState();
 </script>
 
 <footer class="footer">
