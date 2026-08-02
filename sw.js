@@ -1,184 +1,136 @@
 /* ══════════════════════════════════════════════════════════════
-   LIKETWIN — Service Worker لتشغيل تحليل الصوت في الخلفية
-   ──────────────────────────────────────────────────────────────
-   لماذا هذا الملف ضروري:
-   لا توجد طريقة في جافاسكريبت الصفحة العادية لإبقاء طلب fetch يعمل
-   عبر تنقّل كامل بين الصفحات (مثلاً من "تحليل" إلى "لوحتي" ثم
-   العودة) — المتصفح يُلغي أي طلب شبكة قيد التنفيذ فور مغادرة الصفحة
-   لأن كل شيء في تلك الصفحة (بما فيه الـ fetch) يُدمَّر مع تدميرها.
+   LIKETWIN — Service Worker لرفع الملفات الصوتية في الخلفية
+   ------------------------------------------------------------
+   الهدف: جعل رفع الملف (/compare_audio) مستقلاً تماماً عن دورة
+   حياة صفحة الويب. الصفحة قد تنتقل فوراً لصفحة أخرى (لوحتي/الأسعار)
+   بعد الضغط على "ابدأ المقارنة"، لكن هذا الـ Service Worker يواصل
+   الرفع لأن دورة حياته منفصلة عن أي تبويب أو صفحة محددة.
 
-   الحل الوحيد المتاح فعلياً هو Service Worker: برنامج صغير يعمل في
-   خيط منفصل تديره المتصفح نفسه، غير مرتبط بأي صفحة محددة. حين تطلب
-   الصفحة منه بدء "مهمة" (رفع الملف وتحليله)، يستمر هو بتنفيذها حتى
-   لو أُغلقت الصفحة التي طلبتها أو انتقل المستخدم لصفحة أخرى، لأن
-   الطلب أصبح "طلبه هو" وليس طلب تلك الصفحة تحديدًا.
-
-   آلية العمل:
-   1) الصفحة تخزّن الملف الصوتي + معرّف مهمة (jobId) في IndexedDB
-      (قاعدة بيانات مشتركة بين الصفحة وهذا الـ Worker على نفس النطاق).
-   2) الصفحة تُرسل رسالة لهذا الـ Worker: "ابدأ المهمة رقم كذا".
-   3) هذا الملف يقرأ الملف من IndexedDB، يرفعه فعلياً للسيرفر
-      (compare_audio)، وعند اكتمال الطلب (نجاحًا أو فشلًا) يكتب
-      النتيجة في IndexedDB أيضًا، بشكل مستقل تمامًا عن حالة الصفحة.
-   4) الصفحة (سواء بقيت مفتوحة، أو أُعيد فتحها بعد التنقّل) تتحقق من
-      IndexedDB (مباشرة، أو عبر رسالة "ما حالة المهمة؟") لتعرف: هل ما
-      زالت المعالجة جارية؟ أم انتهت بنتيجة؟ أم بخطأ؟
-
-   ملاحظات نشر مهمة:
-   - يجب تقديم هذا الملف من جذر الموقع (أو من أعلى مسار تريد أن يغطيه
-     نطاق الـ Service Worker) — عدّل السطر الخاص بـ importScripts أدناه
-     إذا كان مسار config.js مختلفًا عندك.
-   - Service Workers تعمل فقط على HTTPS (أو localhost أثناء التطوير).
-   - Safari/iOS لا يدعمان Background Sync، لذا أضفنا مسارًا احتياطيًا:
-     تنفيذ الطلب فور استلام الرسالة داخل event.waitUntil مباشرة (بلا
-     انتظار حدث sync)، وهذا يعمل طالما الـ Service Worker نفسه لم
-     يُغلق (المتصفح يُبقيه حيًّا طوال مدة waitUntil عادة، وهي مدة
-     كافية لمعظم عمليات الرفع والتحليل).
+   الآلية:
+   1) الصفحة تُرسل رسالة 'start-upload' تحمل الملف (File) + uploadId
+      فريد + عنوان الـ API + رمز المصادقة (إن وجد).
+   2) نستدعي event.waitUntil(...) فوراً — هذا يُبقي الـ Service Worker
+      حياً طول مدة الرفع حتى لو أُغلقت كل الصفحات المرتبطة به.
+   3) نخزّن حالة الرفع (uploading → done/error) في IndexedDB، وهي
+      قاعدة بيانات مشتركة بين الـ Service Worker وأي صفحة تُفتح على
+      نفس الأصل (origin) — هكذا يمكن لأي صفحة (حتى بعد إغلاق وفتح
+      من جديد) أن تسأل: "وش صار بالرفع اللي بدأته قبل ما أخرج؟"
+   4) نُرسل أيضاً postMessage لأي صفحة نشطة حالياً — تحسين إضافي
+      لتحديث فوري إن كانت نفس الصفحة الأصلية لا تزال مفتوحة.
 ══════════════════════════════════════════════════════════════ */
 
-// ✅ عدّل هذا المسار إذا كان config.js في مكان مختلف عن جذر الموقع.
-// يجب أن يعرّف config.js متغيرًا عامًا اسمه CONFIG بداخله { API: '...' }
-try { importScripts('/config.js'); } catch (e) { /* سنعتمد عندها على apiBase المخزّن مع كل مهمة */ }
+const DB_NAME = 'liketwin-sw';
+const DB_STORE = 'uploads';
 
-const IDB_NAME  = 'liketwin_jobs';
-const IDB_STORE = 'jobs';
-
-function idbOpen() {
+function openDB() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(IDB_NAME, 1);
+    const req = indexedDB.open(DB_NAME, 1);
     req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+      if (!req.result.objectStoreNames.contains(DB_STORE)) {
+        req.result.createObjectStore(DB_STORE, { keyPath: 'id' });
+      }
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
 }
-async function idbGetJob(jobId) {
-  const db = await idbOpen();
+
+async function saveUploadState(id, state) {
+  const db = await openDB();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(IDB_STORE, 'readonly');
-    const r = tx.objectStore(IDB_STORE).get(jobId);
-    r.onsuccess = () => resolve(r.result || null);
-    r.onerror = () => reject(r.error);
-  });
-}
-async function idbSetJob(jobId, val) {
-  const db = await idbOpen();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(IDB_STORE, 'readwrite');
-    tx.objectStore(IDB_STORE).put(val, jobId);
+    const tx = db.transaction(DB_STORE, 'readwrite');
+    tx.objectStore(DB_STORE).put({ id, ...state, ts: Date.now() });
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
 }
 
-self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
-
-// ✅ نتتبع AbortController لكل مهمة قيد التنفيذ فعليًا، لنتمكن من قطع
-// طلب الرفع فورًا عند طلب الإلغاء من الصفحة (بدل ترك الطلب يكتمل
-// بلا فائدة في الخلفية)
-const activeControllers = new Map();
-
-async function notifyClients(jobId, payload) {
-  try {
-    const clientsList = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
-    clientsList.forEach((c) => c.postMessage({ type: 'lt_job_update', jobId, ...payload }));
-  } catch (e) { /* لا مشكلة إن لم توجد صفحات مفتوحة الآن — ستقرأ النتيجة من IndexedDB لاحقًا */ }
+async function deleteUploadState(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(DB_STORE, 'readwrite');
+    tx.objectStore(DB_STORE).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
 }
 
-async function runCompareJob(jobId) {
-  let job = await idbGetJob(jobId);
-  // ✅ فحص + تحديث الحالة إلى "running" فورًا لمنع تنفيذ نفس المهمة
-  // مرتين لو وصلت رسالة "ابدأ" أكثر من مرة (مثلاً من صفحة أُعيد فتحها)
-  if (!job || job.status !== 'pending') return;
-  job.status = 'running';
-  await idbSetJob(jobId, job);
+// ✅ نُفعّل الـ Service Worker فوراً بلا انتظار إغلاق كل التبويبات
+// القديمة — ضروري لأن أول عملية رفع قد تحدث مباشرة بعد أول تسجيل
+self.addEventListener('install', (event) => {
+  self.skipWaiting();
+});
 
-  const abortCtrl = new AbortController();
-  activeControllers.set(jobId, abortCtrl);
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
+async function notifyClients(msg) {
+  try {
+    const list = await self.clients.matchAll({ includeUncontrolled: true });
+    list.forEach((c) => c.postMessage(msg));
+  } catch (e) { /* لا مشكلة إن فشل الإشعار — IndexedDB يبقى المصدر الأساسي */ }
+}
+
+// ✅ نحتفظ بمتحكمات الإلغاء (AbortController) الجارية حسب uploadId
+// حتى يمكن للصفحة طلب إلغاء رفع لا يزال جارياً (زر "إلغاء")
+const activeControllers = new Map();
+
+async function doUpload(uploadId, apiBase, file, authHeader) {
+  await saveUploadState(uploadId, { status: 'uploading' });
+
+  const ctrl = new AbortController();
+  activeControllers.set(uploadId, ctrl);
 
   try {
-    const apiBase = job.apiBase || (typeof CONFIG !== 'undefined' ? CONFIG.API : '');
     const fd = new FormData();
-    fd.append('file', job.blob, job.name || 'audio');
-    const headers = {};
-    if (job.bearer) headers['Authorization'] = 'Bearer ' + job.bearer;
+    fd.append('file', file);
 
-    const res = await fetch(apiBase + '/compare_audio', {
+    const headers = {};
+    if (authHeader) headers['Authorization'] = authHeader;
+
+    const res = await fetch(`${apiBase}/compare_audio`, {
       method: 'POST',
       body: fd,
       credentials: 'include',
       headers,
-      signal: abortCtrl.signal,
+      signal: ctrl.signal,
     });
+
     const data = await res.json();
 
-    // ✅ نتحقق أن المهمة لم تُلغَ (تُحذف من IndexedDB عند الإلغاء من
-    // الصفحة) قبل كتابة النتيجة، حتى لا "تُحيي" مهمة أُلغيت عمدًا
-    const stillExists = await idbGetJob(jobId);
-    if (!stillExists) return;
+    await saveUploadState(uploadId, { status: 'done', data });
+    await notifyClients({ type: 'upload-complete', uploadId, data });
 
-    stillExists.status = 'done';
-    stillExists.result = data;
-    stillExists.finishedAt = Date.now();
-    await idbSetJob(jobId, stillExists);
-    notifyClients(jobId, { status: 'done', result: data });
   } catch (err) {
-    if (err && err.name === 'AbortError') return; // ✅ إلغاء مقصود — لا نكتب أي خطأ
-    const stillExists = await idbGetJob(jobId);
-    if (!stillExists) return;
-    stillExists.status = 'error';
-    stillExists.error = 'فشل الاتصال بالخادم، حاول مجدداً.';
-    stillExists.finishedAt = Date.now();
-    await idbSetJob(jobId, stillExists);
-    notifyClients(jobId, { status: 'error', error: stillExists.error });
+    if (err && err.name === 'AbortError') {
+      // ✅ المستخدم ألغى الرفع بنفسه — لا داعي لحفظ أي حالة خطأ
+      await deleteUploadState(uploadId);
+    } else {
+      await saveUploadState(uploadId, { status: 'error', error: String((err && err.message) || err) });
+      await notifyClients({ type: 'upload-error', uploadId, error: String((err && err.message) || err) });
+    }
   } finally {
-    activeControllers.delete(jobId);
+    activeControllers.delete(uploadId);
   }
 }
 
 self.addEventListener('message', (event) => {
-  const msg = event.data || {};
+  const msg = event.data;
+  if (!msg || !msg.type) return;
 
-  if (msg.type === 'lt_start_job' && msg.jobId) {
-    // ✅ ExtendableMessageEvent يدعم waitUntil تمامًا كأحداث fetch/sync —
-    // هذا ما يُبقي الـ Service Worker حيًّا حتى تكتمل عملية الرفع
-    // والتحليل، بصرف النظر عمّا يحدث لصفحة الموقع نفسها بعد ذلك
-    event.waitUntil(runCompareJob(msg.jobId));
+  if (msg.type === 'start-upload') {
+    const { uploadId, apiBase, file, authHeader } = msg;
+    if (!uploadId || !apiBase || !file) return;
+    // ✅ event.waitUntil يُبقي الـ Service Worker حياً حتى تنتهي
+    // عملية الرفع فعلياً، بغض النظر عن حالة أي صفحة مرتبطة به
+    event.waitUntil(doUpload(uploadId, apiBase, file, authHeader));
     return;
   }
 
-  if (msg.type === 'lt_cancel_job' && msg.jobId) {
-    // ✅ نقطع طلب الرفع فورًا إن كان لا يزال قيد التنفيذ فعليًا
-    const c = activeControllers.get(msg.jobId);
+  if (msg.type === 'cancel-upload') {
+    const c = activeControllers.get(msg.uploadId);
     if (c) c.abort();
     return;
-  }
-
-  if (msg.type === 'lt_check_job' && msg.jobId) {
-    event.waitUntil(
-      idbGetJob(msg.jobId).then((job) => {
-        const reply = {
-          type: 'lt_job_update',
-          jobId: msg.jobId,
-          status: job ? job.status : 'missing',
-          result: job && job.status === 'done' ? job.result : undefined,
-          error: job && job.status === 'error' ? job.error : undefined,
-        };
-        if (event.source) event.source.postMessage(reply);
-      })
-    );
-  }
-});
-
-// ✅ مسار إضافي عبر Background Sync (Chrome/Edge/Android) — يمنح
-// المتصفح فرصة لإعادة محاولة المهمة تلقائيًا إذا انقطع الاتصال
-// بالإنترنت مؤقتًا أثناء التنفيذ، حتى بعد إغلاق كل صفحات الموقع
-self.addEventListener('sync', (event) => {
-  if (event.tag && event.tag.startsWith('lt-job-')) {
-    const jobId = event.tag.slice('lt-job-'.length);
-    event.waitUntil(runCompareJob(jobId));
   }
 });
