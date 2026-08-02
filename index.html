@@ -46,6 +46,17 @@
   } catch (e) {
     document.documentElement.classList.add('sub-hide');
   }
+  try {
+    // ✅ نص حقل رفع الملف: نعتمد آخر حالة معروفة (مشترك وله محاولات متبقية
+    // أم لا) من localStorage لعرض النص الصحيح "ارفع صوتك لمدة 20 ثانية"
+    // مباشرة من أول رسم للصفحة، بدل عرض "ارفع ملفاً (يتطلب اشتراك)" ثم
+    // تبديله بعد استجابة /get_user_info — وهذا هو سبب الوميض الذي كان
+    // يظهر عند إعادة التحميل للمشترك صاحب محاولات متبقية.
+    var cachedUpload = localStorage.getItem('lt_upload');
+    document.documentElement.classList.add(cachedUpload === 'ready' ? 'upload-ready' : 'upload-locked');
+  } catch (e) {
+    document.documentElement.classList.add('upload-locked');
+  }
 })();
 </script>
 <style>
@@ -145,6 +156,11 @@ html.auth-in .nav-link.dash { display: inline-flex; }
 html.auth-out #authSection { display: block; }
 html.auth-in #appPanel { display: flex; flex-direction: column; gap: 14px; }
 html.auth-in #termsNote { display: none; }
+
+/* ✅ نص حقل الرفع الافتراضي (قبل اختيار أي ملف): نعرض النص الصحيح فوراً
+   عبر كلاس على <html> بدل انتظار استجابة /get_user_info، لمنع الوميض */
+html.upload-locked .fnl-ready { display: none; }
+html.upload-ready .fnl-locked { display: none; }
 
 /* ═══ STAGE ═══ */
 .stage { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; position: relative; z-index: 1; }
@@ -710,7 +726,7 @@ audio { display: block; width: 100%; margin-top: 4px; }
       <div class="upload-wrap">
         <label class="file-label" for="fileInput" id="fileLabel">
           <span class="file-icon" id="fileIcon"><i class="fa-solid fa-file-audio"></i></span>
-          <em id="fileNameLabel">ارفع ملفاً (يتطلب اشتراك)</em>
+          <em id="fileNameLabel"><span class="fnl-locked">ارفع ملفاً (يتطلب اشتراك)</span><span class="fnl-ready">ارفع صوتك لمدة 20 ثانية</span></em>
           <span class="file-chip" id="fileChip"></span>
           <div class="file-scan-bar" id="fileScanBar"></div>
         </label>
@@ -1137,7 +1153,12 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
       - يظهر لمن ليست لديه خطة، أو خطته المجانية فقط، أو نفدت محاولاته
       - يختفي فقط لمن لديه خطة مدفوعة (plan غير 'free' وغير فارغة) ورصيد متبقٍّ > 0
 ══════════════════════════════════════ */
-window.idleLabel = 'ارفع ملفاً (يتطلب اشتراك)';
+// ✅ نبدأ بنفس القيمة التي اعتمدها كلاس <html> المخزّن مسبقاً من localStorage
+// (أعلى الصفحة)، حتى تبقى setLabelState('idle', ...) متسقة مع ما هو ظاهر
+// فعلاً منذ أول رسم للصفحة، بدل الافتراض دائماً أن الاشتراك مطلوب.
+window.idleLabel = document.documentElement.classList.contains('upload-ready')
+  ? 'ارفع صوتك لمدة 20 ثانية'
+  : 'ارفع ملفاً (يتطلب اشتراك)';
 
 function updateSubscribeButton(user) {
   const html = document.documentElement;
@@ -1172,12 +1193,18 @@ async function checkUserStatus() {
 
       updateSubscribeButton(data.user);
 
-      if (data.user.remaining > 0) {
-        window.idleLabel = 'ارفع صوتك لمدة 20 ثانية';
-        const fileInput = document.getElementById('fileInput');
-        if (!fileInput.files || !fileInput.files[0]) {
-          document.getElementById('fileNameLabel').textContent = window.idleLabel;
-        }
+      // ✅ تحديث نص حقل الرفع الافتراضي + تخزين الحالة في localStorage
+      // كي يظهر النص الصحيح مباشرة (بلا وميض) في المرة القادمة التي
+      // يُعاد فيها تحميل الصفحة، بدل انتظار استجابة هذا الطلب من جديد.
+      const canUpload = data.user.remaining > 0;
+      window.idleLabel = canUpload ? 'ارفع صوتك لمدة 20 ثانية' : 'ارفع ملفاً (يتطلب اشتراك)';
+      html.classList.remove('upload-ready', 'upload-locked');
+      html.classList.add(canUpload ? 'upload-ready' : 'upload-locked');
+      try { localStorage.setItem('lt_upload', canUpload ? 'ready' : 'locked'); } catch (e) {}
+
+      const fileInput = document.getElementById('fileInput');
+      if (!fileInput.files || !fileInput.files[0]) {
+        document.getElementById('fileNameLabel').textContent = window.idleLabel;
       }
       return;
     }
@@ -1188,6 +1215,11 @@ async function checkUserStatus() {
   html.classList.add('auth-out');
   try { localStorage.setItem('lt_auth', 'out'); } catch (e) {}
   updateSubscribeButton(null);
+
+  // ✅ غير مسجل الدخول = لا يمكن أن يكون رفع الملف "جاهزاً"
+  html.classList.remove('upload-ready');
+  html.classList.add('upload-locked');
+  try { localStorage.setItem('lt_upload', 'locked'); } catch (e) {}
 }
 
 /* ══════════════════════════════════════
