@@ -1223,101 +1223,12 @@ async function checkUserStatus() {
 }
 
 /* ══════════════════════════════════════
-   ✅ جديد: استقصاء دوري (polling) لحالة وظيفة التحليل الخلفية
-   ------------------------------------------------------------
-   التحليل الفعلي صار يشتغل فـ الخادم كـ "وظيفة خلفية" مستقلة عن
-   طلب HTTP الأصلي (انظر تعديلات الباك إند: /compare_audio يرجع
-   فوراً job_id، والتحليل يكمل طريقو فالسيرفر بلا علاقة بحالة
-   المتصفح). هذا يعني أنه حتى لو غادر المستخدم صفحة التحليل
-   (لصفحة "لوحتي" أو "الأسعار") فعلياً، التحليل يبقى شغّال فـ
-   الخلفية على الخادم. كي يرجع المستخدم لهاد الصفحة، ما محتاجينش
-   نعاودو نرسلو الملف من جديد — غير نستأنفو الاستقصاء عن حالة نفس
-   job_id المحفوظ، وهو إما:
-     - لازال "processing" → نبقاو فـ وضع "جاري التحليل"
-     - "success" → نعرضو النتائج مباشرة
-     - "error"   → نعرضو رسالة الخطأ
-══════════════════════════════════════ */
-const JOB_POLL_INTERVAL_MS = 2000;
-let jobPollTimer = null;
-
-function stopJobPolling() {
-  if (jobPollTimer) {
-    clearInterval(jobPollTimer);
-    jobPollTimer = null;
-  }
-}
-
-function startJobPolling(jobId) {
-  stopJobPolling();
-  // ✅ فحص فوري أول مرة بلا انتظار أول تكرار للمؤقّت
-  checkJobStatus(jobId);
-  jobPollTimer = setInterval(() => checkJobStatus(jobId), JOB_POLL_INTERVAL_MS);
-}
-
-async function checkJobStatus(jobId) {
-  try {
-    const res = await fetch(`${CONFIG.API}/job_status/${encodeURIComponent(jobId)}`, {
-      credentials: 'include',
-      headers: authHeaders(),
-    });
-    const data = await res.json();
-
-    if (res.status === 404 || data.status === 'error' && res.status !== 200 && !data.message) {
-      // fallthrough — نتعامل معها تحت بحال أي خطأ آخر
-    }
-
-    if (data.status === 'processing') {
-      // ✅ لازالت الوظيفة جارية فـ الخادم — نبقى فـ وضع "جاري التحليل"
-      // ونعاود الفحص عند التكرار القادم للمؤقّت
-      return;
-    }
-
-    stopJobPolling();
-    setBusy(false);
-
-    if (data.status === 'success') {
-      const readers = data.top_readers || [];
-      window.lastReaders = readers;
-      document.getElementById('readersBody').innerHTML = readers.map(readerCard).join('');
-      document.getElementById('readersCount').textContent = readers.length + ' قارئ';
-      document.getElementById('shareBody').innerHTML = buildSharePanel(readers);
-      document.getElementById('headCopyBtns').classList.add('visible');
-      view('res');
-      saveScanState({ v: 'res', ts: Date.now(), readers });
-      warmUpResultAudios();
-
-      if (typeof data.remaining === 'number') {
-        const currentPlanGuess = { plan: window.lastKnownPlan, remaining: data.remaining };
-        updateSubscribeButton(currentPlanGuess);
-      }
-      return;
-    }
-
-    // data.status === 'error' (أو الوظيفة غير موجودة/منتهية الصلاحية)
-    const msg = data.message || 'حدث خطأ غير متوقع';
-    const subMsgs = ['يجب الاشتراك', 'لا توجد خطة نشطة', 'انتهت المحاولات'];
-    const showSub = subMsgs.includes(msg);
-    document.getElementById('errMsg').textContent = msg;
-    document.getElementById('btnSubscribeErr').style.display = showSub ? 'inline-block' : 'none';
-    view('err');
-    saveScanState({ v: 'err', ts: Date.now(), errMsg: msg, showSub });
-    if (showSub) updateSubscribeButton({ plan: null, remaining: 0 });
-
-  } catch (e) {
-    // ✅ خطأ شبكة مؤقت أثناء الاستقصاء (انقطاع مؤقت فـ الاتصال) — لا
-    // نوقف الاستقصاء ولا نعرض خطأ فوراً، نحاول مجدداً عند التكرار القادم
-    console.warn('[checkJobStatus] تعذر الفحص، سيُعاد المحاولة تلقائياً:', e);
-  }
-}
-
-/* ══════════════════════════════════════
    زر الإلغاء
 ══════════════════════════════════════ */
 let ctrl = null, busy = false;
 
 document.getElementById('btnStop').onclick = () => {
   if (ctrl) ctrl.abort();
-  stopJobPolling();
   setBusy(false);
   document.getElementById('fileInput').value = '';
   setLabelState('idle', window.idleLabel);
@@ -1352,26 +1263,25 @@ function aurl(u) { return u && u.startsWith('http') ? u : location.origin + u; }
 
 /* ══════════════════════════════════════
    ✅ حفظ/استرجاع حالة التحليل عبر sessionStorage
-   ------------------------------------------------------------
    المشكلة: الانتقال لصفحة أخرى (لوحتي، الأسعار) هو تنقّل كامل بين
-   صفحات، فيُنهي المتصفح تنفيذ الجافاسكريبت الحالي (بما فيه أي
-   fetch أو setInterval قيد التشغيل فـ هاد الصفحة). فإذا كان
-   المستخدم في وضع "جاري التحليل" أو يشاهد نتائج/خطأ ثم غادر وعاد،
-   كانت الصفحة تُعاد من الصفر لواجهة الرفع الفارغة وكأن شيئاً لم يحدث.
-
-   الحل: نخزّن آخر حالة معروفة (نتائج/خطأ/job_id لوظيفة جارية) فـ
-   sessionStorage (يبقى محفوظاً عبر التنقل بين الصفحات فـ نفس
-   التبويب، ويُمسح تلقائياً عند إغلاقه). عند إعادة فتح صفحة
-   التحليل، نتحقق من هذه الحالة:
-   - نتائج/خطأ محفوظان → نعرضهما مباشرة بلا أي طلب شبكة جديد.
-   - job_id محفوظ لوظيفة "جاري التحليل" → نستأنف استقصاء حالتها
-     (GET /job_status/{job_id}) بلا أي إعادة رفع للملف — لأن
-     التحليل الفعلي يكمل طريقه فـ الخادم بشكل مستقل تماماً عن حالة
-     المتصفح (انظر تعليق startJobPolling أعلاه).
-   - حالة قديمة جداً (أكثر من 3 دقائق) → نتجاهلها احترازاً.
+   صفحات، فيُنهي المتصفح تنفيذ الجافاسكريبت ويُلغي أي طلب شبكة قيد
+   التنفيذ (fetch) تلقائياً. فإذا كان المستخدم في وضع "جاري التحليل"
+   أو يشاهد نتائج/خطأ ثم غادر وعاد، كانت الصفحة تُعاد من الصفر لواجهة
+   الرفع الفارغة وكأن شيئاً لم يحدث.
+   الحل: نخزّن آخر حالة معروفة (نتائج/خطأ/جاري التحليل + الملف نفسه إن
+   كان صغيراً بما يكفي) في sessionStorage (يبقى محفوظاً عبر التنقل بين
+   الصفحات في نفس التبويب، ويُمسح تلقائياً عند إغلاقه). عند إعادة فتح
+   صفحة التحليل، نتحقق من هذه الحالة:
+   - نتائج/خطأ محفوظان → نعرضهما مباشرة بلا أي طلب جديد.
+   - "جاري التحليل" مع ملف محفوظ → نعيد بناء نفس الملف ونُطلق نفس طلب
+     المقارنة تلقائياً من جديد (لأن الطلب الأصلي أُلغي فعلياً عند
+     مغادرة الصفحة، فلا سبيل لـ"استئنافه" فعلياً سوى إعادة إرساله).
+   - حالة قديمة جداً (أكثر من 3 دقائق) → نتجاهلها احترازاً، لأن الخادم
+     غالباً يكون قد انتهى من معالجتها أو انتهت صلاحيتها.
 ══════════════════════════════════════ */
 const SCAN_STATE_KEY = 'lt_scan';
 const SCAN_MAX_AGE_MS = 3 * 60 * 1000; // 3 دقائق
+const SCAN_MAX_FILE_MB_FOR_RESUME = 8; // فوق هذا الحجم لا نخزّن الملف نفسه (حدود سعة sessionStorage)
 
 function saveScanState(obj) {
   try { sessionStorage.setItem(SCAN_STATE_KEY, JSON.stringify(obj)); } catch (e) { /* تجاهل: مساحة التخزين ممتلئة أو غير متاحة */ }
@@ -1386,11 +1296,27 @@ function clearScanState() {
   try { sessionStorage.removeItem(SCAN_STATE_KEY); } catch (e) {}
 }
 
-function persistLoadingState(jobId) {
-  // ✅ نحفظ job_id فقط (بلا الملف نفسه) — الوظيفة تشتغل فعلياً فـ الخادم،
-  // فما محتاجينش نخزّنو الملف الخام لإعادة إرساله لاحقاً بحال كان
-  // النظام القديم، وهذا كيفتح المجال لملفات بأي حجم بلا قيود تخزين محلي.
-  saveScanState({ v: 'load', ts: Date.now(), jobId });
+function persistLoadingState(file) {
+  // نحفظ حالة "جاري التحليل" فوراً (بلا الملف)، ثم نستكمل — بشكل غير
+  // متزامن ودون تعطيل طلب المقارنة الأصلي — بإضافة بيانات الملف نفسه
+  // إن كان حجمه معقولاً، لتمكين الاستئناف التلقائي لاحقاً.
+  saveScanState({ v: 'load', ts: Date.now() });
+
+  if (!file || file.size > SCAN_MAX_FILE_MB_FOR_RESUME * 1024 * 1024) return;
+
+  try {
+    const reader = new FileReader();
+    reader.onload = () => {
+      saveScanState({
+        v: 'load',
+        ts: Date.now(),
+        fileB64: reader.result,
+        fileType: file.type,
+        fileName: file.name,
+      });
+    };
+    reader.readAsDataURL(file);
+  } catch (e) { /* تجاهل — تبقى حالة "جاري التحليل" محفوظة بلا الملف */ }
 }
 
 function restoreScanState() {
@@ -1422,15 +1348,20 @@ function restoreScanState() {
   }
 
   if (st.v === 'load') {
-    if (st.jobId) {
-      // ✅ التحليل كان جارياً (أو ربما انتهى فعلاً) فـ الخادم وقت مغادرة
-      // الصفحة — نعرض واجهة "جاري التحليل" فوراً، ونستأنف الاستقصاء عن
-      // حالة نفس job_id بلا أي إعادة رفع للملف من جديد
-      setBusy(true);
-      view('load');
-      startJobPolling(st.jobId);
+    if (st.fileB64) {
+      // ✅ نعيد بناء نفس الملف من البيانات المحفوظة، ونُطلق نفس عملية
+      // التحليل تلقائياً — لأن المستخدم كان بالفعل في وضع "جاري التحليل"
+      // قبل مغادرته الصفحة، ومغادرته لصفحة أخرى وعودته لا تعني أنه ألغى العملية
+      fetch(st.fileB64)
+        .then(r => r.blob())
+        .then(blob => {
+          const file = new File([blob], st.fileName || 'audio', { type: st.fileType || blob.type || 'audio/mpeg' });
+          runAnalysis(file);
+        })
+        .catch(() => clearScanState());
     } else {
-      // توافقاً مع أي حالة قديمة محفوظة من نسخة سابقة بلا job_id
+      // لم يُحفظ الملف (كان كبيراً جداً على sessionStorage) — لا يمكننا
+      // استئناف التحليل فعلياً، فنعرض رسالة واضحة بدل الإيحاء بأنه لا يزال جارياً
       clearScanState();
       document.getElementById('errMsg').textContent = 'انتهت الجلسة أثناء التحليل، الرجاء رفع الملف والمحاولة مجدداً.';
       document.getElementById('btnSubscribeErr').style.display = 'none';
@@ -1447,7 +1378,6 @@ function restoreScanState() {
 ══════════════════════════════════════ */
 function resetToUpload() {
   if (ctrl) { try { ctrl.abort(); } catch (e) {} }
-  stopJobPolling();
   setBusy(false);
 
   // تصفير حقل الملف وحالته البصرية
@@ -1726,11 +1656,9 @@ document.addEventListener('play', function (e) {
 
 /* ══════════════════════════════════════
    الزر الرئيسي — رفع ومعالجة
-   ✅ التحليل الآن يعمل بنظام "وظيفة خلفية" (job): نرفع الملف مرة
-   واحدة فقط، السيرفر يبدأ التحليل ويرجع job_id فوراً، ثم نستقصي
-   حالته (startJobPolling) بدل انتظار استجابة HTTP طويلة. هذا هو
-   نفس المسار المستعمل من طرف restoreScanState() عند العودة لصفحة
-   التحليل ووجود job_id محفوظ من جلسة سابقة.
+   ✅ استُخرج المنطق إلى دالة runAnalysis(file) مستقلة (بدل أن يكون حصراً
+   داخل onclick) لأن restoreScanState() تحتاج استدعاءها أيضاً تلقائياً
+   عند العودة لصفحة التحليل ووجود ملف محفوظ من جلسة "جاري التحليل" سابقة
 ══════════════════════════════════════ */
 async function runAnalysis(file) {
   if (!file || busy) return;
@@ -1738,6 +1666,10 @@ async function runAnalysis(file) {
   setBusy(true);
   ctrl = new AbortController();
   view('load');
+
+  // ✅ حفظ حالة "جاري التحليل" (+ الملف نفسه إن أمكن) لتُستعاد تلقائياً
+  // إذا غادر المستخدم الصفحة (لوحتي/الأسعار) ثم عاد قبل انتهاء العملية
+  persistLoadingState(file);
 
   const fd = new FormData();
   fd.append('file', file);
@@ -1752,17 +1684,6 @@ async function runAnalysis(file) {
     });
 
     const data = await res.json();
-
-    if (data.status === 'processing' && data.job_id) {
-      // ✅ التحليل صار يشتغل فـ الخلفية على السيرفر — نحفظ job_id فقط
-      // (بلا الملف نفسه) ونبدأ استقصاء حالته دورياً. هكذا لو غادر
-      // المستخدم الصفحة (لوحتي/الأسعار) وعاد، نستأنف نفس الاستقصاء
-      // بلا إعادة رفع الملف من جديد ولا إعادة تشغيل التحليل من الصفر
-      persistLoadingState(data.job_id);
-      startJobPolling(data.job_id);
-      return;
-    }
-
     setBusy(false);
 
     if (data.status !== 'success') {
@@ -1782,8 +1703,6 @@ async function runAnalysis(file) {
       return;
     }
 
-    // ✅ نتيجة فورية بلا وظيفة خلفية (ملف سبق تحليله وكان مخزّناً فـ
-    // الكاش — cached: true — فالباك إند كيرجعها مباشرة بلا job_id)
     const readers = data.top_readers || [];
     window.lastReaders = readers;
 
@@ -1836,8 +1755,8 @@ document.getElementById('btnGo').onclick = () => {
 checkUserStatus();
 
 // ✅ إذا كان المستخدم قد غادر صفحة التحليل (لصفحة "لوحتي" أو "الأسعار"
-// مثلاً) أثناء وجود تحليل جارٍ (job_id محفوظ) أو نتائج أو خطأ ظاهر، نستعيد
-// نفس الحالة هنا بدل عرض واجهة الرفع الفارغة من جديد
+// مثلاً) أثناء وجود تحليل جارٍ أو نتائج أو خطأ ظاهر، نستعيد نفس الحالة
+// هنا بدل عرض واجهة الرفع الفارغة من جديد
 restoreScanState();
 </script>
 
