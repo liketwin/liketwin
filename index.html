@@ -1315,6 +1315,51 @@ async function checkJobStatus(jobId) {
 ══════════════════════════════════════ */
 let ctrl = null, busy = false;
 
+/* ══════════════════════════════════════
+   ✅ منع فقدان طلب رفع الملف عند التنقل المبكر
+   ------------------------------------------------------------
+   المشكلة: روابط مثل "الأسعار"/"لوحتي" هي تنقّل كامل بين صفحات
+   (وليس SPA)، فإذا ضُغط عليها والطلب الأول (رفع الملف لـ
+   /compare_audio، الذي يرجع job_id) لايزال جارياً، المتصفح يُلغي
+   الطلب فوراً قبل وصوله للسيرفر — فلا يتولد job_id إطلاقاً، ويظهر
+   خطأ "فشل الاتصال بالخادم" رغم أن التحليل لم يبدأ فعلياً.
+
+   الحل: نؤجل أي تنقل داخلي (نمنع السلوك الافتراضي) طول ما
+   uploadInFlight = true، وننفذه تلقائياً بمجرد وصول رد الطلب
+   الأول (نجاح أو فشل) — عندها إما تولّد job_id (وأصبح التحليل
+   آمناً ومستقلاً فـ الخادم) أو ظهر خطأ حقيقي.
+══════════════════════════════════════ */
+let uploadInFlight = false;
+let pendingNavHref = null;
+
+function showUploadWaitToast() {
+  let t = document.getElementById('uploadWaitToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'uploadWaitToast';
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:2000;background:#111827;border:1px solid rgba(100,140,255,0.3);color:#e8edf8;padding:10px 16px;border-radius:10px;font-family:Tajawal,sans-serif;font-size:0.85rem;box-shadow:0 6px 24px rgba(0,0,0,0.4);direction:rtl;';
+    document.body.appendChild(t);
+  }
+  t.textContent = 'جارٍ رفع الملف، سننتقل تلقائياً بعد لحظة...';
+  t.style.display = 'block';
+}
+function hideUploadWaitToast() {
+  const t = document.getElementById('uploadWaitToast');
+  if (t) t.style.display = 'none';
+}
+
+document.addEventListener('click', function (e) {
+  if (!uploadInFlight) return;
+  const a = e.target.closest('a[href]');
+  if (!a) return;
+  const href = a.getAttribute('href');
+  // نتجاهل الروابط الخارجية / التي تفتح تبويب جديد / روابط الصفحة نفسها (#)
+  if (!href || href.startsWith('#') || href.startsWith('http') || a.target === '_blank') return;
+  e.preventDefault();
+  pendingNavHref = href;
+  showUploadWaitToast();
+}, true);
+
 document.getElementById('btnStop').onclick = () => {
   if (ctrl) ctrl.abort();
   stopJobPolling();
@@ -1731,6 +1776,12 @@ document.addEventListener('play', function (e) {
    حالته (startJobPolling) بدل انتظار استجابة HTTP طويلة. هذا هو
    نفس المسار المستعمل من طرف restoreScanState() عند العودة لصفحة
    التحليل ووجود job_id محفوظ من جلسة سابقة.
+
+   ✅ جديد: uploadInFlight يبقى true طول ما طلب /compare_audio
+   الأول (رفع الملف) لايزال جارياً — إذا ضغط المستخدم على رابط
+   داخلي (الأسعار/لوحتي) خلال هذه الفترة، يُؤجَّل التنقل تلقائياً
+   (انظر معترض النقر أعلاه) حتى يصل الرد ويتولد job_id، فلا يعد
+   الطلب يُقطع فـ منتصف الطريق قبل وصوله للسيرفر.
 ══════════════════════════════════════ */
 async function runAnalysis(file) {
   if (!file || busy) return;
@@ -1742,6 +1793,7 @@ async function runAnalysis(file) {
   const fd = new FormData();
   fd.append('file', file);
 
+  uploadInFlight = true; // ✅ جديد — يحمي طلب الرفع من قطع التنقل المبكر
   try {
     const res = await fetch(`${CONFIG.API}/compare_audio`, {
       method: 'POST',
@@ -1815,6 +1867,16 @@ async function runAnalysis(file) {
     } else {
       // ✅ طلب أُلغي (مثلاً عبر زر الإلغاء) — لا داعي لحفظ أي حالة
       clearScanState();
+    }
+  } finally {
+    // ✅ جديد: انتهى طلب الرفع (نجاحاً أو فشلاً) — إذا كان هناك تنقل
+    // مؤجل بسبب ضغط المستخدم على رابط داخلي أثناء الرفع، ننفذه الآن
+    uploadInFlight = false;
+    if (pendingNavHref) {
+      const href = pendingNavHref;
+      pendingNavHref = null;
+      hideUploadWaitToast();
+      window.location.href = href;
     }
   }
 }
