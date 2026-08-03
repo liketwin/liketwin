@@ -1066,8 +1066,9 @@ function setLabelState(state, nameText, chipText, msgText) {
     icon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
     chip.classList.add('valid');
     chip.textContent = chipText;
-    msg.classList.add('valid');
-    valTxt.textContent = msgText;
+    // ✅ لا تُعرض أي رسالة تفصيلية لحالة "صالح" — أيقونة العلامة الخضراء
+    // وشارة المدة كافيتان لإخبار المستخدم أن الملف مقبول
+    msg.style.display = 'none';
     btn.disabled = false;
     return;
   }
@@ -1118,7 +1119,7 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
     URL.revokeObjectURL(objUrl);
 
     if (audio.duration === Infinity || isNaN(audio.duration)) {
-      setLabelState('valid', file.name, '', 'الملف صالح — اضغط "ابدأ المقارنة" للمتابعة');
+      setLabelState('valid', file.name, '');
       return;
     }
 
@@ -1138,8 +1139,7 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
     setLabelState(
       'valid',
       file.name,
-      `${dur} ثانية`,
-      'الملف صالح — اضغط "ابدأ المقارنة" للمتابعة'
+      `${dur} ثانية`
     );
   });
 
@@ -1147,7 +1147,7 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
     console.warn('audio metadata error:', e);
     URL.revokeObjectURL(objUrl);
     // الملف يُقبل محلياً، لكن السيرفر سيرفضه إن لم يكن صوتاً صالحاً فعلاً
-    setLabelState('valid', file.name, '', 'الملف صالح — اضغط "ابدأ المقارنة" للمتابعة');
+    setLabelState('valid', file.name, '');
   });
 
   audio.load();
