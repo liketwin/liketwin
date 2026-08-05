@@ -553,7 +553,8 @@ audio { display: block; width: 100%; margin-top: 4px; }
   pointer-events: none;
 }
 .cp-track:hover .cp-handle,
-.cp-track.scrubbing .cp-handle {
+.cp-track.scrubbing .cp-handle,
+.cp-track.is-playing .cp-handle {
   transform: translate(-50%, -50%) scale(1);
   opacity: 1;
 }
@@ -2145,6 +2146,10 @@ document.addEventListener('play', function (e) {
   const box = e.target.closest('.clip-box');
   const btn = box && box.querySelector('.cp-play');
   if (btn) btn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+  // ✅ إظهار مقبض السحب فور بدء التشغيل — بلا انتظار مرور الماوس أو
+  // بدء السحب — حتى يلاحظ المستخدم منذ اللحظة الأولى أن الشريط قابل للسحب
+  const track = box && box.querySelector('.cp-track');
+  if (track) track.classList.add('is-playing');
 }, true); // ✅ capture:true ضروري لأن حدث play لا ينتشر (bubble) في DOM
 
 // ✅ إعادة أيقونة الزر لـ "تشغيل" عند الإيقاف المؤقت
@@ -2153,6 +2158,9 @@ document.addEventListener('pause', function (e) {
   const box = e.target.closest('.clip-box');
   const btn = box && box.querySelector('.cp-play');
   if (btn) btn.innerHTML = '<i class="fa-solid fa-play"></i>';
+  // ✅ نُبقي المقبض ظاهراً أثناء الإيقاف المؤقت أيضاً (وليس فقط أثناء
+  // التشغيل الفعلي) — فالمستخدم متوقّف مؤقتاً وقد يريد السحب لموضع آخر
+  // قبل الاستئناف؛ لا نُخفيه إلا عند انتهاء المقطع بالكامل (ended)
 }, true);
 
 // ✅ تحديث شريط التقدّم والمقبض والوقت أثناء التشغيل العادي (بلا سحب)
@@ -2198,6 +2206,8 @@ document.addEventListener('ended', function (e) {
   const handle = box.querySelector('.cp-handle');
   if (progress) progress.style.width = '0%';
   if (handle) handle.style.left = '0%';
+  const track = box.querySelector('.cp-track');
+  if (track) track.classList.remove('is-playing'); // ✅ المقطع انتهى تماماً — نُخفي المقبض حتى تشغيل تالٍ
 }, true);
 
 /* ══════════════════════════════════════
