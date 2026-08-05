@@ -487,6 +487,86 @@ input[type=file] { display: none; }
 .clip-download-btn:hover { color: var(--accent2); background: rgba(79,142,247,0.14); }
 audio { display: block; width: 100%; margin-top: 4px; }
 
+/* ✅ مشغّل صوت مخصّص بالكامل — يستبدل controls الأصلية من المتصفح
+   (والتي كانت تُظهر زر "٣ نقاط" بخيارات غير مفيدة مثل سرعة التشغيل)
+   بواجهة تحكم بسيطة: زر تشغيل/إيقاف + شريط تقدّم + الوقت فقط. */
+.custom-player { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.cp-play {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 11px;
+  transition: background 0.2s, transform 0.15s;
+}
+.cp-play:hover { background: #3a7aee; transform: scale(1.06); }
+.cp-track {
+  direction: ltr;
+  flex: 1;
+  height: 5px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 3px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+}
+.cp-track::before {
+  /* ✅ منطقة لمس/سحب أوسع من الخط المرئي فعلياً (بلا تغيير الشكل الظاهر)
+     لتسهيل الإمساك بالمؤشر والسحب على الشاشات اللمسية والفأرة معاً */
+  content: '';
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  left: 0;
+  right: 0;
+}
+.cp-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #38a169, #68d391);
+  border-radius: 3px;
+}
+.cp-handle {
+  /* ✅ مقبض صغير على رأس شريط التقدّم — يوضّح بصرياً أنه قابل للسحب */
+  position: absolute;
+  top: 50%;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(56,161,105,0.9), 0 1px 4px rgba(0,0,0,0.4);
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  left: 0%;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+  pointer-events: none;
+}
+.cp-track:hover .cp-handle,
+.cp-track.scrubbing .cp-handle {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+}
+.cp-track.scrubbing .cp-progress { transition: none; }
+.cp-time {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  color: var(--text3);
+  min-width: 74px;
+  text-align: left;
+  direction: ltr;
+}
+
 .share-panel { display: flex; flex-direction: column; gap: 14px; }
 .share-reader-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; }
 .share-rank { width: 26px; height: 26px; border-radius: 50%; background: rgba(79,142,247,0.12); color: var(--accent2); font-size: 0.78rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -629,40 +709,40 @@ audio { display: block; width: 100%; margin-top: 4px; }
 <!-- ═══ NAVBAR ═══ -->
 <header class="topbar">
   <a href="/" class="logo">
- <svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="bg" x1="10%" y1="0%" x2="90%" y2="100%">
-          <stop offset="0%" stop-color="#1a90ff"/>
-          <stop offset="100%" stop-color="#0050d0"/>
-        </linearGradient>
-        <filter id="sh" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="#0030a0" flood-opacity="0.35"/>
-        </filter>
-      </defs>
-      <path d="
-        M250 28
-        C372 28, 472 118, 472 226
-        C472 334, 372 424, 250 424
-        C228 424, 208 420, 190 414
-        C172 432, 152 448, 136 460
-        C122 470, 110 474, 104 470
-        C98 466, 98 458, 102 448
-        C108 432, 112 414, 110 396
-        C108 388, 104 380, 100 372
-        C68 338, 28 286, 28 226
-        C28 118, 128 28, 250 28 Z
-      " fill="url(#bg)" filter="url(#sh)"/>
-      <path d="
-        M110 226
-        C130 226, 130 180, 150 180
-        C170 180, 170 272, 190 272
-        C210 272, 210 110, 230 110
-        C250 110, 250 300, 270 300
-        C290 300, 290 150, 310 150
-        C330 150, 330 250, 350 250
-        C370 250, 370 226, 390 226
-      " fill="none" stroke="white" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
+<svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="10%" y1="0%" x2="90%" y2="100%">
+      <stop offset="0%" stop-color="#1a90ff"/>
+      <stop offset="100%" stop-color="#0050d0"/>
+    </linearGradient>
+    <filter id="sh" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="#0030a0" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <path d="
+    M250 28
+    C372 28, 472 118, 472 226
+    C472 334, 372 424, 250 424
+    C228 424, 208 420, 190 414
+    C172 432, 152 448, 136 460
+    C122 470, 110 474, 104 470
+    C98 466, 98 458, 102 448
+    C108 432, 112 414, 110 396
+    C108 388, 104 380, 100 372
+    C68 338, 28 286, 28 226
+    C28 118, 128 28, 250 28 Z
+  " fill="url(#bg)" filter="url(#sh)"/>
+  <path d="
+    M110 226
+    C130 226, 130 180, 150 180
+    C170 180, 170 272, 190 272
+    C210 272, 210 110, 230 110
+    C250 110, 250 300, 270 300
+    C290 300, 290 150, 310 150
+    C330 150, 330 250, 350 250
+    C370 250, 370 226, 390 226
+  " fill="none" stroke="white" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
     <span class="logo-name">LIKETWIN</span>
   </a>
 
@@ -789,7 +869,7 @@ audio { display: block; width: 100%; margin-top: 4px; }
   <div class="results" id="vRes">
     <div class="col">
       <div class="col-head">
-        <h2>أقرب القرّاء تشابهًا مع صوتك من بين 530 قارئًا</h2>
+        <h2>القرّاء الأقرب لصوتك والذين يمكنك تقليدهم بأقل مجهود</h2>
         <span class="col-count" id="readersCount"></span>
       </div>
       <div class="col-body" id="readersBody"></div>
@@ -797,7 +877,7 @@ audio { display: block; width: 100%; margin-top: 4px; }
 
     <div class="col">
       <div class="col-head">
-        <h2>القرّاء الأقرب إلى بصمتك الصوتية</h2>
+     <h2>القرّاء الأكثر مطابقة لهوية صوتك الخام</h2>
         <div class="head-share-btns" id="headCopyBtns">
           <!-- ✅ زر "تحليل جديد" — يعيد ضبط الحالة ويعرض واجهة الرفع من جديد بدون تحديث الصفحة -->
           <button class="head-btn new-scan" id="btnNewScan" onclick="resetToUpload()">
@@ -1916,11 +1996,6 @@ function readerCard(item) {
     // بجانب النسبة، ولا يمس رابط <source> أعلاه إطلاقاً
     const dlPath = safeDownloadUrl(c.download_url);
     const dlSrc  = dlPath ? `${CONFIG.API}${dlPath}` : '';
-    // ✅ preload="metadata" بدل "none" — بدون معرفة مدة المقطع مسبقاً
-    // (duration=NaN/Infinity) لا يستطيع المتصفح رسم/تفعيل شريط السحب
-    // (seek bar) بشكل صحيح، فكان السحب للأمام/الخلف لا يعمل قبل أن
-    // يبدأ التشغيل فعلياً. "metadata" يجلب فقط المدة والحجم (طلب صغير
-    // جداً، بلا تحميل الصوت كاملاً) فيصبح الشريط قابلاً للسحب فوراً.
     return `
     <div class="clip-box">
       <div class="clip-label">
@@ -1930,7 +2005,13 @@ function readerCard(item) {
           ${dlSrc ? `<a class="clip-download-btn" href="${dlSrc.replace(/"/g, '')}" download title="تحميل المقطع"><i class="fa-solid fa-download"></i></a>` : ''}
         </span>
       </div>
-      ${audioSrc ? `<audio controls controlsList="nodownload noplaybackrate noremoteplayback" preload="metadata"><source src="${audioSrc.replace(/"/g, '')}" type="audio/wav"></audio>` : ''}
+      ${audioSrc ? `
+      <div class="custom-player">
+        <button type="button" class="cp-play" aria-label="تشغيل"><i class="fa-solid fa-play"></i></button>
+        <div class="cp-track"><div class="cp-progress"></div><div class="cp-handle"></div></div>
+        <span class="cp-time">0:00</span>
+      </div>
+      <audio preload="none" style="display:none"><source src="${audioSrc.replace(/"/g, '')}" type="audio/wav"></audio>` : ''}
     </div>`;
   }).join('');
   return `
@@ -1946,15 +2027,178 @@ function readerCard(item) {
 }
 
 /* ══════════════════════════════════════
-   ✅ منع تشغيل أكثر من مقطع صوتي واحد في نفس الوقت
-   (event delegation لأن عناصر <audio> تُنشأ ديناميكياً)
+   ✅ مشغّل الصوت المخصّص (بديل عن controls الأصلية من المتصفح)
+   ------------------------------------------------------------
+   controls الأصلية للمتصفح تُظهر زر "٣ نقاط" يحتوي خيارات غير
+   مفيدة هنا (كسرعة التشغيل)، ولا توجد طريقة موثوقة عبر CSS/HTML
+   لإخفاء هذا الزر تحديداً بلا إخفاء بقية عناصر التحكم معه. الحل:
+   الاستغناء الكامل عن controls، وبناء واجهة تحكم بسيطة خاصة بنا
+   (زر تشغيل/إيقاف + شريط تقدّم قابل للسحب + الوقت)، فتختفي كل
+   قوائم المتصفح الإضافية تلقائياً لأنها مرتبطة حصراً بـ controls.
+
+   event delegation مستعمل لأن عناصر <audio> والمشغّل المخصص تُنشأ
+   ديناميكياً بعد كل نتيجة تحليل.
+
+   ✅ الإصلاح هنا: شريط التقدّم (.cp-track) كان يستجيب فقط لحدث
+   "click" — أي نقلة فورية للمكان المضغوط عليه — بلا أي دعم فعلي
+   للسحب المستمر (اضغط واستمر بالسحب يميناً/يساراً). تم استبدال هذا
+   بمنطق pointerdown/pointermove/pointerup الذي:
+   1) يبدأ "السحب" عند الضغط الأول (pointerdown) وينقل الصوت فوراً
+      لموضع الضغط، تماماً كالسلوك السابق.
+   2) يستمر بتحديث موضع التشغيل مع كل حركة للمؤشر/الإصبع طالما أن
+      الزر مازال مضغوطاً (pointermove) — وهنا يكمن السحب الفعلي.
+   3) ينهي عملية السحب عند رفع الإصبع/الزر (pointerup) أو عند إلغاء
+      المؤشر (pointercancel، مثل الخروج من الشاشة أثناء اللمس).
+   pointer events تعمل موحّدة على الفأرة واللمس معاً بلا الحاجة
+   لمعالجة منفصلة لكل منهما. setPointerCapture يضمن استمرار وصول
+   أحداث pointermove/pointerup لعنصر الشريط نفسه حتى لو خرج المؤشر
+   عن حدوده أثناء السحب السريع.
 ══════════════════════════════════════ */
+function formatClipTime(sec) {
+  if (!isFinite(sec) || sec < 0) return '0:00';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return m + ':' + String(s).padStart(2, '0');
+}
+
+// ✅ تشغيل/إيقاف عبر زر المشغّل المخصص فقط (السحب على الشريط صار
+// معالَجاً بالكامل عبر أحداث pointerdown/pointermove/pointerup أدناه)
+document.addEventListener('click', function (e) {
+  const playBtn = e.target.closest('.cp-play');
+  if (playBtn) {
+    const box = playBtn.closest('.clip-box');
+    const audio = box && box.querySelector('audio');
+    if (!audio) return;
+    if (audio.paused) audio.play(); else audio.pause();
+  }
+});
+
+// ✅ منطق السحب الفعلي على شريط التقدّم
+let scrubTrack = null;   // عنصر .cp-track الذي يجري سحبه حالياً
+let scrubAudio = null;   // عنصر <audio> المرتبط به
+let scrubWasPlaying = false; // هل كان يشتغل قبل بدء السحب (لاستئنافه بعده)
+
+function seekTrackTo(track, audio, clientX) {
+  if (!audio || !isFinite(audio.duration) || audio.duration <= 0) return;
+  const rect = track.getBoundingClientRect();
+  const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+  audio.currentTime = ratio * audio.duration;
+
+  // ✅ تحديث فوري لعرض الشريط والمقبض والوقت أثناء السحب، بلا انتظار
+  // حدث timeupdate التالي من المتصفح (قد يتأخر قليلاً عن حركة الإصبع)
+  const box = track.closest('.clip-box');
+  const progress = track.querySelector('.cp-progress');
+  const handle = track.querySelector('.cp-handle');
+  const timeEl = box && box.querySelector('.cp-time');
+  const pct = ratio * 100;
+  if (progress) progress.style.width = pct + '%';
+  if (handle) handle.style.left = pct + '%';
+  if (timeEl) {
+    timeEl.textContent = formatClipTime(audio.currentTime) + ' / ' + formatClipTime(audio.duration);
+  }
+}
+
+document.addEventListener('pointerdown', function (e) {
+  const track = e.target.closest('.cp-track');
+  if (!track) return;
+  const box = track.closest('.clip-box');
+  const audio = box && box.querySelector('audio');
+  if (!audio) return;
+
+  scrubTrack = track;
+  scrubAudio = audio;
+  scrubWasPlaying = !audio.paused;
+  if (scrubWasPlaying) audio.pause(); // تفادي "تلعثم" الصوت أثناء السحب المستمر
+
+  track.classList.add('scrubbing');
+  try { track.setPointerCapture(e.pointerId); } catch (err) {}
+
+  seekTrackTo(track, audio, e.clientX);
+  e.preventDefault();
+});
+
+document.addEventListener('pointermove', function (e) {
+  if (!scrubTrack || !scrubAudio) return;
+  seekTrackTo(scrubTrack, scrubAudio, e.clientX);
+});
+
+function finishScrub(e) {
+  if (!scrubTrack) return;
+  try { scrubTrack.releasePointerCapture(e.pointerId); } catch (err) {}
+  scrubTrack.classList.remove('scrubbing');
+  if (scrubWasPlaying && scrubAudio) {
+    scrubAudio.play().catch(() => {}); // استئناف التشغيل من الموضع الجديد بعد ترك السحب
+  }
+  scrubTrack = null;
+  scrubAudio = null;
+  scrubWasPlaying = false;
+}
+document.addEventListener('pointerup', finishScrub);
+document.addEventListener('pointercancel', finishScrub);
+
+// ✅ إيقاف أي مقطع آخر قيد التشغيل، وتحديث أيقونة الزر لـ "إيقاف مؤقت"
 document.addEventListener('play', function (e) {
   if (e.target.tagName !== 'AUDIO') return;
   document.querySelectorAll('audio').forEach(function (a) {
     if (a !== e.target && !a.paused) a.pause();
   });
+  const box = e.target.closest('.clip-box');
+  const btn = box && box.querySelector('.cp-play');
+  if (btn) btn.innerHTML = '<i class="fa-solid fa-pause"></i>';
 }, true); // ✅ capture:true ضروري لأن حدث play لا ينتشر (bubble) في DOM
+
+// ✅ إعادة أيقونة الزر لـ "تشغيل" عند الإيقاف المؤقت
+document.addEventListener('pause', function (e) {
+  if (e.target.tagName !== 'AUDIO') return;
+  const box = e.target.closest('.clip-box');
+  const btn = box && box.querySelector('.cp-play');
+  if (btn) btn.innerHTML = '<i class="fa-solid fa-play"></i>';
+}, true);
+
+// ✅ تحديث شريط التقدّم والمقبض والوقت أثناء التشغيل العادي (بلا سحب)
+document.addEventListener('timeupdate', function (e) {
+  if (e.target.tagName !== 'AUDIO') return;
+  const box = e.target.closest('.clip-box');
+  if (!box) return;
+  const audio = e.target;
+  const track = box.querySelector('.cp-track');
+  // ✅ لا نُحدّث الشريط من timeupdate أثناء السحب الفعلي — seekTrackTo
+  // أعلاه هو من يتحكم بالعرض في تلك اللحظة لتفادي "الارتجاف" البصري
+  if (track && track === scrubTrack) return;
+  const progress = box.querySelector('.cp-progress');
+  const handle = box.querySelector('.cp-handle');
+  const timeEl = box.querySelector('.cp-time');
+  if (isFinite(audio.duration) && audio.duration > 0) {
+    const pct = (audio.currentTime / audio.duration) * 100;
+    if (progress) progress.style.width = pct + '%';
+    if (handle) handle.style.left = pct + '%';
+  }
+  if (timeEl) {
+    timeEl.textContent = formatClipTime(audio.currentTime) +
+      (isFinite(audio.duration) ? ' / ' + formatClipTime(audio.duration) : '');
+  }
+}, true);
+
+// ✅ عرض المدة الكاملة فور توفّرها (قبل بدء التشغيل)
+document.addEventListener('loadedmetadata', function (e) {
+  if (e.target.tagName !== 'AUDIO') return;
+  const box = e.target.closest('.clip-box');
+  const timeEl = box && box.querySelector('.cp-time');
+  if (timeEl) timeEl.textContent = '0:00 / ' + formatClipTime(e.target.duration);
+}, true);
+
+// ✅ إعادة ضبط الزر وشريط التقدّم والمقبض عند انتهاء المقطع
+document.addEventListener('ended', function (e) {
+  if (e.target.tagName !== 'AUDIO') return;
+  const box = e.target.closest('.clip-box');
+  if (!box) return;
+  const btn = box.querySelector('.cp-play');
+  if (btn) btn.innerHTML = '<i class="fa-solid fa-play"></i>';
+  const progress = box.querySelector('.cp-progress');
+  const handle = box.querySelector('.cp-handle');
+  if (progress) progress.style.width = '0%';
+  if (handle) handle.style.left = '0%';
+}, true);
 
 /* ══════════════════════════════════════
    الزر الرئيسي — رفع ومعالجة
