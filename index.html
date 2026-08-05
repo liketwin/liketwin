@@ -450,9 +450,6 @@ input[type=file] { display: none; }
 .head-btn.copy.copied { background: rgba(72,187,120,0.1); color: var(--success); border-color: rgba(72,187,120,0.25); }
 .head-btn.share-btn { background: rgba(126,179,255,0.1); color: var(--accent2); border: 1px solid rgba(126,179,255,0.22); }
 .head-btn.share-btn:hover { background: rgba(126,179,255,0.2); }
-/* ✅ زر "تحليل جديد" في رأس عمود المشاركة */
-.head-btn.new-scan { background: rgba(79,142,247,0.14); color: #fff; border: 1px solid rgba(79,142,247,0.3); }
-.head-btn.new-scan:hover { background: rgba(79,142,247,0.24); }
 
 .col-body { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
 .col-body::-webkit-scrollbar { width: 4px; }
@@ -880,11 +877,6 @@ audio { display: block; width: 100%; margin-top: 4px; }
       <div class="col-head">
      <h2>القرّاء الأكثر مطابقة لهوية صوتك الخام</h2>
         <div class="head-share-btns" id="headCopyBtns">
-          <!-- ✅ زر "تحليل جديد" — يعيد ضبط الحالة ويعرض واجهة الرفع من جديد بدون تحديث الصفحة -->
-          <button class="head-btn new-scan" id="btnNewScan" onclick="resetToUpload()">
-            <span><i class="fa-solid fa-arrow-rotate-left"></i></span>
-            <span>تحليل جديد</span>
-          </button>
           <button class="head-btn copy" id="btnCopyHead" onclick="copyResult()">
             <span><i class="fa-regular fa-copy"></i></span>
             <span>نسخ النتائج</span>
