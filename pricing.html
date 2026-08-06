@@ -131,6 +131,17 @@ body::before {
   transform: translateY(-5px);
   box-shadow: 0 0 44px rgba(0,229,176,0.38), 0 8px 32px rgba(0,0,0,0.4);
 }
+/* ══════════════════════════════════════
+   ✅ حالة الانتظار: تُخفي البطاقة بالكامل (بدون أي محتوى) إلى حين وصول
+   رد /pricing_status الحقيقي، فلا يرى المستخدم أبداً حالة قد تكون
+   خاطئة أو قديمة. تحافظ على مكانها فـ الشبكة (Grid) عبر opacity بدل
+   display، كي لا تتحرك باقي البطاقات عند ظهورها.
+══════════════════════════════════════ */
+.plan-free.pending {
+  opacity: 0;
+  pointer-events: none;
+  animation: none;
+}
 @keyframes freePulse {
   0%, 100% { box-shadow: 0 0 24px var(--free-glow), 0 4px 24px rgba(0,0,0,0.35); }
   50%       { box-shadow: 0 0 42px rgba(0,229,176,0.32), 0 4px 24px rgba(0,0,0,0.35); }
@@ -675,7 +686,7 @@ body::before {
   <div class="plans">
 
     <!-- FREE PLAN -->
-    <div class="plan-free" id="freePlanCard">
+    <div class="plan-free pending" id="freePlanCard">
       <div class="plan-free-inner">
 
         <div class="active-free-state hidden" id="activeFreeState">
@@ -742,36 +753,6 @@ body::before {
 
       </div>
     </div>
-
-    <!-- ══════════════════════════════════════
-         ✅ سكربت متزامن (Inline): يُنفَّذ فوراً أثناء تحليل الصفحة —
-         قبل أن يرسم المتصفح البطاقة أعلاه — لذلك المستخدم يرى الحالة
-         الصحيحة النهائية ("ابدأ مجاناً" أو "نفدت الأماكن") من أول
-         لحظة، بدون أي فراغ وبدون أي وميض بين حالتين.
-         يعتمد على آخر حالة معروفة محفوظة محلياً (localStorage) من زيارة
-         سابقة كأفضل تخمين فوري؛ فإن لم توجد (أول زيارة) يُفترض أن
-         الخطة متاحة (الحالة الأشيع)، ثم يتحقق طلب /pricing_status في
-         الخلفية لاحقاً من الحقيقة ويصحّح الذاكرة المحلية بصمت لأي
-         زيارة قادمة.
-    ══════════════════════════════════════ -->
-    <script>
-    (function () {
-      var LT_FREE_CACHE_KEY = 'lt_free_sold_out';
-      var soldOut = false;
-      try {
-        soldOut = localStorage.getItem(LT_FREE_CACHE_KEY) === '1';
-      } catch (e) { /* localStorage غير متاح — نفترض الحالة الافتراضية (متاح) */ }
-
-      window.__ltInitialSoldOut = soldOut; // يُستخدم لاحقاً لمقارنة النتيجة الحقيقية بما عُرض فورياً
-
-      if (soldOut) {
-        document.getElementById('freePlanCard').classList.add('sold-out');
-        document.getElementById('soldOutState').classList.add('visible');
-      } else {
-        document.getElementById('activeFreeState').classList.remove('hidden');
-      }
-    })();
-    </script>
 
     <!-- Paid Plans -->
     <div class="plan popular selected" data-plan="starter" onclick="selectPlan(this)">
@@ -1118,54 +1099,56 @@ async function loadCurrentUser() {
   } catch { _currentUser = null; }
 }
 
-const LT_FREE_CACHE_KEY = 'lt_free_sold_out';
-
-// ✅ إظهار حالة "الخطة متاحة" — تُستخدم فقط لتصحيح الواجهة في حال كانت
-// الحالة المعروضة فورياً (من الذاكرة المحلية) مختلفة عن الحقيقة القادمة
-// من الخادم (حالة نادرة الحدوث)
+// ✅ إظهار حالة "الخطة متاحة"
 function showActiveFreeState() {
-  const card        = document.getElementById('freePlanCard');
-  const soldOutState = document.getElementById('soldOutState');
-  const activeState  = document.getElementById('activeFreeState');
-  card.classList.remove('sold-out');
-  soldOutState.classList.remove('visible');
-  activeState.classList.remove('hidden');
+  document.getElementById('activeFreeState').classList.remove('hidden');
+}
+
+// ✅ إظهار البطاقة بالكامل — تُستدعى فقط بعد أن تُعبَّأ بالبيانات الصحيحة
+// (سواء "متاح" أو "نفدت الأماكن")، فلا يرى المستخدم البطاقة إلا وهي
+// جاهزة بمحتواها النهائي الصحيح
+function revealFreePlanCard() {
+  const card = document.getElementById('freePlanCard');
+  if (card) card.classList.remove('pending');
 }
 
 // ✅ جديد: جلب حالة العرض المجاني من الباك إند (sold_out / user_has_free)
 // ضروري لأن الباك إند الجديد لم يعد يبني هذا فـ HTML من طرف السيرفر
 //
-// ✅ إصلاح الوميض (Flash) نهائياً: الحالة الصحيحة تُعرض فوراً عند فتح
-// الصفحة (عبر السكربت المتزامن أعلى البطاقة الذي يعتمد على آخر حالة
-// محفوظة فـ localStorage). هذا الطلب هنا لا "يقرر" الحالة الأولى، بل
-// فقط يتحقق من الخادم فـ الخلفية ويحدّث الذاكرة المحلية لأي زيارة قادمة.
-// لا نغيّر الواجهة إلا إذا كانت الحقيقة القادمة من الخادم مختلفة فعلاً
-// عمّا عُرض فورياً (وهذا نادر جداً: يحدث فقط أول مرة تنتقل فيها الخطة
-// المجانية فعلياً إلى "نفدت الأماكن")
+// ✅ إصلاح الوميض (Flash) نهائياً وبدون أي حالة قديمة (Stale): بطاقة
+// الخطة المجانية تبقى مخفية بالكامل (class="pending" → opacity:0) منذ
+// تحميل الصفحة، ولا تُظهَر أبداً إلا بعد أن نملأها بالبيانات الحقيقية
+// القادمة من هذا الطلب مباشرة. لا نعتمد على أي قيمة محفوظة مسبقاً
+// (localStorage أو غيره) كي لا تظهر حالة قديمة قد تكون تغيّرت. الطلب
+// يُطلق بأسرع وقت ممكن (أول سطر يُنفَّذ فـ هذا الملف) لتقليل مدة
+// الإخفاء إلى أقل ما يمكن (عادة بضع مئات من المللي ثانية فقط).
 async function loadPricingStatus() {
   try {
     const res = await fetch(`${CONFIG.API}/pricing_status`, { credentials: 'include' });
-    if (!res.ok) return;
+    if (!res.ok) { showActiveFreeState(); return; }
     const data = await res.json();
-    if (data.status !== 'ok') return;
+    if (data.status !== 'ok') { showActiveFreeState(); return; }
 
-    try { localStorage.setItem(LT_FREE_CACHE_KEY, data.sold_out ? '1' : '0'); } catch (e) { /* نتجاهل */ }
-
-    if (data.sold_out !== window.__ltInitialSoldOut) {
-      if (data.sold_out) {
-        activateSoldOutUI();
-      } else {
-        showActiveFreeState();
-      }
+    if (data.sold_out) {
+      activateSoldOutUI();
+    } else {
+      showActiveFreeState();
     }
-
     if (data.user_has_free) {
       setFreeBtnActivated();
     }
   } catch {
-    // نتجاهل — الحالة المعروضة فورياً عند فتح الصفحة تبقى كما هي
+    // فشل الطلب (مثلاً بلا اتصال) — نلجأ للحالة الافتراضية الآمنة (متاح)
+    // بدل ترك البطاقة مخفية للأبد
+    showActiveFreeState();
+  } finally {
+    revealFreePlanCard();
   }
 }
+
+// ✅ نطلق الطلب فوراً بمجرد تحميل هذا السكربت (أسرع وقت ممكن)، بالتوازي
+// مع بقية عمليات التهيئة، لتقليل مدة إخفاء البطاقة إلى أدنى حد
+loadPricingStatus();
 
 function getUserEmail() { return _currentUser ? _currentUser.email : null; }
 function getUserId()    { return _currentUser ? _currentUser.user_id : null; }
@@ -1219,7 +1202,9 @@ function hideAllSections() {
 
 async function initPage() {
   await loadCurrentUser();
-  await loadPricingStatus(); // ✅ يحدد حالة "نفدت الأماكن" و"مفعّل مسبقاً"، ويخفي حالة التحميل بعد الانتهاء
+  // ملاحظة: loadPricingStatus() تم إطلاقه مسبقاً فور تحميل هذا السكربت
+  // (أعلاه) للحصول على أسرع استجابة ممكنة — لا حاجة لاستدعائه هنا مرة
+  // أخرى، لأنه لا يؤثر على منطق تسجيل الدخول أو حالة زر الاشتراك
 
   const userId = getUserId();
   if (!userId) {
