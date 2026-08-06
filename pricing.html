@@ -1123,8 +1123,18 @@ function revealFreePlanCard() {
 // يُطلق بأسرع وقت ممكن (أول سطر يُنفَّذ فـ هذا الملف) لتقليل مدة
 // الإخفاء إلى أقل ما يمكن (عادة بضع مئات من المللي ثانية فقط).
 async function loadPricingStatus() {
+  // ✅ مهلة زمنية قصوى: إذا لم يرد الخادم خلال 8 ثوانٍ (خادم بطيء، مشكلة
+  // فـ Cloudflare، اتصال معلّق بصمت...) نُلغي الطلب يدوياً بدل الانتظار
+  // إلى ما لا نهاية — فتُكشف البطاقة بحالة افتراضية آمنة بدل أن تبقى
+  // مخفية للأبد
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+
   try {
-    const res = await fetch(`${CONFIG.API}/pricing_status`, { credentials: 'include' });
+    const res = await fetch(`${CONFIG.API}/pricing_status`, {
+      credentials: 'include',
+      signal: controller.signal,
+    });
     if (!res.ok) { showActiveFreeState(); return; }
     const data = await res.json();
     if (data.status !== 'ok') { showActiveFreeState(); return; }
@@ -1138,10 +1148,15 @@ async function loadPricingStatus() {
       setFreeBtnActivated();
     }
   } catch {
-    // فشل الطلب (مثلاً بلا اتصال) — نلجأ للحالة الافتراضية الآمنة (متاح)
-    // بدل ترك البطاقة مخفية للأبد
+    // فشل الطلب (بلا اتصال، مهلة منتهية، خطأ شبكة...) — نلجأ للحالة
+    // الافتراضية الآمنة (متاح) بدل ترك البطاقة مخفية للأبد
     showActiveFreeState();
   } finally {
+    // ✅ finally يُنفَّذ دائماً فـ JavaScript — سواء نجح الطلب، أو دخلنا
+    // أحد شروط "return" أعلاه، أو رمى استثناء ومسكه catch. لذلك
+    // revealFreePlanCard() مضمون الاستدعاء فـ كل السيناريوهات، ولا يمكن
+    // أن تبقى البطاقة مخفية إلى الأبد
+    clearTimeout(timeoutId);
     revealFreePlanCard();
   }
 }
