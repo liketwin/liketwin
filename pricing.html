@@ -171,6 +171,35 @@ body::before {
   opacity: 0.3;
 }
 
+/* ══════════════════════════════════════
+   ✅ حالة التحميل (Loading Skeleton) للخطة المجانية
+   تُعرض فقط أثناء انتظار رد /pricing_status، لمنع أي وميض
+   (Flash) بين حالة "متاح" و"نفدت الأماكن". لا تؤثر على أي
+   تصميم أو ستايل موجود مسبقاً — إضافة معزولة فقط.
+══════════════════════════════════════ */
+.free-loading-state {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 0 2px;
+}
+.free-loading-state.hidden { display: none; }
+.free-skel {
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.04) 100%);
+  background-size: 200% 100%;
+  animation: skelShine 1.4s ease-in-out infinite;
+}
+@keyframes skelShine {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.free-skel-badge { width: 58%; height: 20px; border-radius: 20px; }
+.free-skel-price { width: 38%; height: 38px; margin-top: 2px; }
+.free-skel-line { width: 92%; height: 13px; }
+.free-skel-line.short { width: 70%; }
+.free-skel-btn { width: 100%; height: 44px; border-radius: 11px; margin-top: 4px; }
+
 .sold-out-state {
   display: none;
   flex-direction: column;
@@ -678,7 +707,19 @@ body::before {
     <div class="plan-free" id="freePlanCard">
       <div class="plan-free-inner">
 
-        <div class="active-free-state" id="activeFreeState">
+        <!-- ✅ حالة التحميل: تُعرض افتراضياً عند فتح الصفحة، وتُخفى فقط
+             بعد وصول رد /pricing_status، لمنع أي وميض بين حالتي
+             "متاح" و"نفدت الأماكن" -->
+        <div class="free-loading-state" id="freeLoadingState">
+          <div class="free-skel free-skel-badge"></div>
+          <div class="free-skel free-skel-price"></div>
+          <div class="free-skel free-skel-line"></div>
+          <div class="free-skel free-skel-line short"></div>
+          <div class="free-skel free-skel-line"></div>
+          <div class="free-skel free-skel-btn"></div>
+        </div>
+
+        <div class="active-free-state hidden" id="activeFreeState">
           <div class="free-badge"><i class="fa-solid fa-gift"></i> مجاناً لأول 10000 شخص</div>
           <div>
             <div class="free-price" style="margin-top:8px;">
@@ -1088,22 +1129,49 @@ async function loadCurrentUser() {
   } catch { _currentUser = null; }
 }
 
+// ✅ إخفاء حالة التحميل (Skeleton) الخاصة بالخطة المجانية — تُستدعى دائماً
+// بعد أن يستقر رد /pricing_status (نجاحاً أو فشلاً)، حتى لا تبقى معلّقة
+function hideFreeLoadingState() {
+  const loadingEl = document.getElementById('freeLoadingState');
+  if (loadingEl) loadingEl.classList.add('hidden');
+}
+
+// ✅ إظهار حالة "الخطة متاحة" (إزالة الإخفاء الافتراضي عنها) — تُستدعى فقط
+// بعد أن نعرف بشكل مؤكد أن sold_out = false، لمنع أي وميض
+function showActiveFreeState() {
+  const el = document.getElementById('activeFreeState');
+  if (el) el.classList.remove('hidden');
+}
+
 // ✅ جديد: جلب حالة العرض المجاني من الباك إند (sold_out / user_has_free)
 // ضروري لأن الباك إند الجديد لم يعد يبني هذا فـ HTML من طرف السيرفر
+//
+// ✅ تعديل إصلاح الوميض (Flash): لا نعرض أي حالة افتراضية (لا "متاح" ولا
+// "نفدت الأماكن") قبل وصول رد هذا الطلب. الحالة الافتراضية فـ الـ HTML هي
+// "جارٍ التحميل" (Skeleton)، ولا نغادرها إلا بعد أن نعرف النتيجة الحقيقية
+// (أو نفشل فـ الطلب، وحينها نستخدم نفس السلوك الاحتياطي القديم: نعتبر
+// العرض متاحاً كحالة افتراضية آمنة).
 async function loadPricingStatus() {
   try {
     const res = await fetch(`${CONFIG.API}/pricing_status`, { credentials: 'include' });
-    if (!res.ok) return;
+    if (!res.ok) { showActiveFreeState(); return; }
     const data = await res.json();
-    if (data.status !== 'ok') return;
+    if (data.status !== 'ok') { showActiveFreeState(); return; }
 
     if (data.sold_out) {
       activateSoldOutUI();
+    } else {
+      showActiveFreeState();
     }
     if (data.user_has_free) {
       setFreeBtnActivated();
     }
-  } catch { /* نتجاهل — الحالة الافتراضية (متاح) تبقى كما هي */ }
+  } catch {
+    // نتجاهل — الحالة الافتراضية (متاح) تبقى كما هي
+    showActiveFreeState();
+  } finally {
+    hideFreeLoadingState();
+  }
 }
 
 function getUserEmail() { return _currentUser ? _currentUser.email : null; }
@@ -1158,7 +1226,7 @@ function hideAllSections() {
 
 async function initPage() {
   await loadCurrentUser();
-  await loadPricingStatus(); // ✅ يحدد حالة "نفدت الأماكن" و"مفعّل مسبقاً"
+  await loadPricingStatus(); // ✅ يحدد حالة "نفدت الأماكن" و"مفعّل مسبقاً"، ويخفي حالة التحميل بعد الانتهاء
 
   const userId = getUserId();
   if (!userId) {
