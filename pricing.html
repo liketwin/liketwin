@@ -1148,11 +1148,30 @@ function hideAllSections() {
   document.getElementById('sectionFreeSuccess').classList.remove('visible');
 }
 
+// ✅ فحص حالة المستخدم الحالي الخاصة (هل فعّل الخطة المجانية سابقاً؟) عبر
+// /check_free_plan — endpoint خفيف يقرأ عمود had_free لحساب هذا المستخدم
+// فقط (بلا أي COUNT عام). هذا منفصل تماماً عن حالة "sold_out" العامة:
+// حتى لو كان العرض ما زال متاحاً للجميع، إذا كان هذا المستخدم بالذات قد
+// فعّل خطته المجانية من قبل (فـ زيارة سابقة)، يجب أن يظهر الزر "تم
+// التفعيل" مباشرة بدل "ابدأ مجاناً" — بلا هذا الفحص، كان الزر يرجع لحالته
+// الافتراضية عند كل إعادة تحميل للصفحة رغم أن المستخدم مفعّل بالفعل
+async function checkOwnFreePlanStatus() {
+  try {
+    const res = await fetch(`${CONFIG.API}/check_free_plan`, { credentials: 'include' });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.status === 'ok' && data.active) {
+      setFreeBtnActivated();
+    }
+  } catch {
+    // فشل الطلب — نترك الزر بحالته الافتراضية "ابدأ مجاناً"؛ إذا كان
+    // المستخدم مفعّلاً بالفعل وضغط الزر، سيرفضه /create_order برسالة
+    // واضحة ("لديك حساب مفعل مسبقاً") بدل منحه خطة مكررة
+  }
+}
+
 async function initPage() {
   await loadCurrentUser();
-  // ملاحظة: loadPricingStatus() تم إطلاقه مسبقاً فور تحميل هذا السكربت
-  // (أعلاه) للحصول على أسرع استجابة ممكنة — لا حاجة لاستدعائه هنا مرة
-  // أخرى، لأنه لا يؤثر على منطق تسجيل الدخول أو حالة زر الاشتراك
 
   const userId = getUserId();
   if (!userId) {
@@ -1164,6 +1183,10 @@ async function initPage() {
     document.getElementById('userBadge').style.display = 'inline-flex';
     document.getElementById('badgeEmail').textContent = getDisplayLabel();
     document.getElementById('summaryEmail').textContent = getDisplayLabel();
+    // ✅ لا داعٍ لانتظار (await) هذا الطلب — لا يجب أن يؤخر بقية التهيئة؛
+    // الزر يبدأ بحالته الافتراضية "ابدأ مجاناً" ويتحدّث لـ"تم التفعيل"
+    // بمجرد وصول الرد (عادة خلال أجزاء من الثانية)
+    checkOwnFreePlanStatus();
   }
   updateSummary();
 }
