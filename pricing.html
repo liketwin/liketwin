@@ -1148,20 +1148,57 @@ function hideAllSections() {
   document.getElementById('sectionFreeSuccess').classList.remove('visible');
 }
 
+// ✅ تخزين محلي (localStorage) لحالة "المستخدم فعّل خطته المجانية سابقاً"،
+// مرتبط بمعرّف المستخدم (userId) تحديداً — لتفادي أي خلط بين حسابين
+// مختلفين يسجّلان الدخول من نفس المتصفح.
+//
+// لماذا localStorage آمن هنا (بعكس حالة "sold_out" العامة التي رفضناها
+// سابقاً لهذا السبب بالذات): had_free علم شخصي دائم بمجرد أن يصبح true
+// لا يرجع أبداً إلى false فـ السير العادي للتطبيق (admin_reset_user حتى
+// لا يصفّره — فقط يصفّر remaining/plan). فلا يوجد أي سيناريو واقعي تكون
+// فيه القيمة المخزّنة محلياً "قديمة وخاطئة" — إما صحيحة، أو لم تُحفَظ
+// بعد (فتُعرض الحالة الافتراضية "ابدأ مجاناً" مؤقتاً وتتحدّث بعد وصول
+// رد /check_free_plan، تماماً كما كان يحدث سابقاً فقط أول مرة).
+function getFreePlanCacheKey(userId) {
+  return `lt_free_plan_active:${userId}`;
+}
+
+function markFreePlanActiveLocally(userId) {
+  try {
+    localStorage.setItem(getFreePlanCacheKey(userId), '1');
+  } catch (e) {
+    // localStorage غير متاح (وضع خاص، إعدادات متصفح صارمة...) — نتجاهل
+    // بصمت، يبقى التحقق عبر /check_free_plan فـ كل زيارة كما كان
+  }
+}
+
+function isFreePlanActiveLocally(userId) {
+  try {
+    return localStorage.getItem(getFreePlanCacheKey(userId)) === '1';
+  } catch (e) {
+    return false;
+  }
+}
+
 // ✅ فحص حالة المستخدم الحالي الخاصة (هل فعّل الخطة المجانية سابقاً؟) عبر
 // /check_free_plan — endpoint خفيف يقرأ عمود had_free لحساب هذا المستخدم
 // فقط (بلا أي COUNT عام). هذا منفصل تماماً عن حالة "sold_out" العامة:
 // حتى لو كان العرض ما زال متاحاً للجميع، إذا كان هذا المستخدم بالذات قد
 // فعّل خطته المجانية من قبل (فـ زيارة سابقة)، يجب أن يظهر الزر "تم
 // التفعيل" مباشرة بدل "ابدأ مجاناً" — بلا هذا الفحص، كان الزر يرجع لحالته
-// الافتراضية عند كل إعادة تحميل للصفحة رغم أن المستخدم مفعّل بالفعل
-async function checkOwnFreePlanStatus() {
+// الافتراضية عند كل إعادة تحميل للصفحة رغم أن المستخدم مفعّل بالفعل.
+//
+// يبقى هذا الطلب ضرورياً حتى مع التخزين المحلي: فهو المصدر الوحيد للحقيقة
+// أول مرة (قبل أي تخزين محلي)، وهو الذي يملأ الذاكرة المحلية أصلاً عبر
+// markFreePlanActiveLocally أدناه.
+async function checkOwnFreePlanStatus(userId) {
   try {
     const res = await fetch(`${CONFIG.API}/check_free_plan`, { credentials: 'include' });
     if (!res.ok) return;
     const data = await res.json();
     if (data.status === 'ok' && data.active) {
       setFreeBtnActivated();
+      markFreePlanActiveLocally(userId);
     }
   } catch {
     // فشل الطلب — نترك الزر بحالته الافتراضية "ابدأ مجاناً"؛ إذا كان
@@ -1183,10 +1220,21 @@ async function initPage() {
     document.getElementById('userBadge').style.display = 'inline-flex';
     document.getElementById('badgeEmail').textContent = getDisplayLabel();
     document.getElementById('summaryEmail').textContent = getDisplayLabel();
-    // ✅ لا داعٍ لانتظار (await) هذا الطلب — لا يجب أن يؤخر بقية التهيئة؛
-    // الزر يبدأ بحالته الافتراضية "ابدأ مجاناً" ويتحدّث لـ"تم التفعيل"
-    // بمجرد وصول الرد (عادة خلال أجزاء من الثانية)
-    checkOwnFreePlanStatus();
+
+    // ✅ إصلاح الوميض (الزر يتغيّر من "ابدأ مجاناً" إلى "تم التفعيل" بعد
+    // ثانية تقريباً): إذا كانت الحالة محفوظة محلياً من زيارة سابقة، نُظهر
+    // "تم التفعيل" فوراً وبشكل متزامن هنا — بلا أي انتظار لرد الشبكة،
+    // فلا يُرى الزر إطلاقاً بحالته الافتراضية قبل التحديث
+    if (isFreePlanActiveLocally(userId)) {
+      setFreeBtnActivated();
+    }
+
+    // ✅ لا داعٍ لانتظار (await) هذا الطلب — لا يجب أن يؤخر بقية التهيئة.
+    // يبقى ضرورياً فـ كل زيارة: أول مرة ليملأ الذاكرة المحلية للمرة
+    // القادمة، وبعدها كتحقق صامت فـ الخلفية (لا يُرى أي تغيير مرئي إذا
+    // كانت الحالة المحلية مطابقة للحقيقة، وهو ما يحدث دائماً بما أن
+    // had_free لا يرجع من true إلى false أبداً)
+    checkOwnFreePlanStatus(userId);
   }
   updateSummary();
 }
@@ -1288,6 +1336,7 @@ async function submitFreeOrder() {
     document.getElementById('sectionFreeSuccess').classList.add('visible');
 
     setFreeBtnActivated();
+    markFreePlanActiveLocally(getUserId());
     showToast('تم تفعيل خطتك المجانية!');
     scrollToPaySection();
 
