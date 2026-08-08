@@ -10,7 +10,8 @@
 <style>
 :root {
   --bg: #0a0e1a; --surface: #111827; --surface2: #1a2235;
-  --border: rgba(100,140,255,0.12); --accent: #4f8ef7; --accent2: #7eb3ff;
+  --border: rgba(100,140,255,0.12); --border-h: rgba(100,140,255,0.3);
+  --accent: #4f8ef7; --accent2: #7eb3ff;
   --glow: rgba(79,142,247,0.22); --text: #e8edf8; --text2: #8a9bbf; --text3: #5a6a8a;
   --success: #48bb78;
 }
@@ -18,14 +19,30 @@
 body { background: var(--bg); color: var(--text); font-family: 'Tajawal', sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
 
 /* topbar */
-.topbar { height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; background: rgba(10,14,26,0.97); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50; }
-
-/* .logo-name { font-size: 1.1rem; font-weight: 700; color:#FFFFFF; } */
-.back-btn { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1px solid var(--border); border-radius: 9px; color: var(--accent2); text-decoration: none; font-size: 0.85rem; font-weight: 700; transition: all 0.2s; }
+.topbar {
+  flex-shrink: 0; height: 64px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 0 24px;
+  background: rgba(10,14,26,0.97);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+  position: sticky; top: 0; z-index: 50;
+}
+.nav-links { display: flex; gap: 8px; align-items: center; }
+.nav-link {
+  padding: 8px 16px; border: 1px solid var(--border); border-radius: 9px;
+  color: var(--text2); text-decoration: none; font-size: 0.85rem; font-weight: 600;
+  transition: all 0.2s;
+}
+.nav-link:hover { background: rgba(79,142,247,0.08); border-color: var(--border-h); color: var(--accent2); }
+.back-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border: 1px solid var(--border); border-radius: 9px;
+  color: var(--accent2); text-decoration: none; font-size: 0.85rem; font-weight: 700;
+  transition: all 0.2s;
+  order: 10;
+}
 .back-btn:hover { background: rgba(79,142,247,0.08); }
-
-
-
 
 .logo {
   display: flex;
@@ -43,7 +60,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Tajawal', sans-s
 .logo-name {
   font-size: 1.1rem;
   font-weight: 700;
-  color:#000000;
+  color: #1877F2;
 }
 
 
@@ -74,7 +91,6 @@ body { background: var(--bg); color: var(--text); font-family: 'Tajawal', sans-s
 .wa-btn svg { width: 20px; height: 20px; fill: #25d366; flex-shrink: 0; }
 
 /* footer */
-/* FOOTER */
 .footer {
   direction: rtl;
   font-family: 'Tajawal', sans-serif;
@@ -186,14 +202,12 @@ body { background: var(--bg); color: var(--text); font-family: 'Tajawal', sans-s
     C370 282, 370 258, 390 258
   " fill="none" stroke="url(#bg)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
-
-
-      <span class="logo-name">LIKETWIN</span>
-
-    
-
+    <span class="logo-name">LIKETWIN</span>
   </a>
-  <a class="back-btn" href="/"><i class="fa-solid fa-arrow-left"></i> العودة</a>
+  <nav class="nav-links">
+    <a class="back-btn" href="/"><i class="fa-solid fa-arrow-left"></i> العودة</a>
+    <a class="nav-link" href="/pricing">الاشتراك</a>
+  </nav>
 </header>
 
 <main class="page">
