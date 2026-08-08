@@ -1,0 +1,949 @@
+<!-- LIKETWIN — صفحة التدرب على تقليد القرّاء -->
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="config.js"></script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-19Q0B48Y2B"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-19Q0B48Y2B');
+</script>
+<title>LIKETWIN — تدرب على تقليد القرّاء</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script>
+/* ✅ نفس آلية الصفحة الرئيسية: نحسم حالة تسجيل الدخول فوراً من آخر
+   قيمة معروفة فـ localStorage قبل أي رسم للصفحة، لمنع أي وميض. */
+(function () {
+  try {
+    var cached = localStorage.getItem('lt_auth');
+    document.documentElement.classList.add(cached === 'in' ? 'auth-in' : 'auth-out');
+  } catch (e) {
+    document.documentElement.classList.add('auth-out');
+  }
+})();
+</script>
+<style>
+:root {
+  --bg: #0a0e1a;
+  --surface: #111827;
+  --surface2: #1a2235;
+  --border: rgba(100,140,255,0.12);
+  --border-h: rgba(100,140,255,0.3);
+  --accent: #4f8ef7;
+  --accent2: #7eb3ff;
+  --glow: rgba(79,142,247,0.22);
+  --text: #e8edf8;
+  --text2: #8a9bbf;
+  --text3: #5a6a8a;
+  --error: #f56565;
+  --success: #48bb78;
+  --warn: #f6ad55;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeUp { from { opacity:0; transform: translateY(14px);} to { opacity:1; transform: translateY(0);} }
+@keyframes pulseRing { 0% { box-shadow: 0 0 0 0 rgba(245,101,101,0.45); } 70% { box-shadow: 0 0 0 16px rgba(245,101,101,0); } 100% { box-shadow: 0 0 0 0 rgba(245,101,101,0); } }
+@keyframes barPulse { 0%, 100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Tajawal', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 10%, rgba(79,142,247,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 35% at 85% 90%, rgba(126,179,255,0.05) 0%, transparent 55%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ═══ TOPBAR ═══ */
+.topbar {
+  flex-shrink: 0;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 28px;
+  background: rgba(10,14,26,0.97);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+.logo svg { width: 40px; height: 40px; flex-shrink: 0; }
+.logo-name { font-size: 1.1rem; font-weight: 700; color: #1877F2; letter-spacing: -0.01em; }
+.nav-links { display: flex; align-items: center; gap: 6px; }
+.nav-link { color: var(--text2); text-decoration: none; font-size: 0.9rem; font-weight: 500; padding: 8px 14px; border-radius: 8px; transition: all 0.2s; }
+.nav-link:hover { color: var(--text); background: rgba(79,142,247,0.08); }
+.nav-link.active { color: var(--accent2); background: rgba(79,142,247,0.08); }
+.nav-link.dash { display: none; align-items: center; gap: 6px; color: var(--accent2); border: 1px solid var(--border); font-weight: 700; }
+html.auth-in .nav-link.dash { display: inline-flex; }
+.nav-link.dash:hover { background: rgba(79,142,247,0.1); border-color: var(--border-h); }
+
+/* ═══ STAGE ═══ */
+.stage { flex: 1; display: flex; flex-direction: column; position: relative; z-index: 1; padding: clamp(20px, 4vh, 40px) 20px 40px; }
+.wrap { width: 100%; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: clamp(14px, 2.5vh, 22px); }
+
+/* ═══ PROGRESS ═══ */
+.progress-track { display: flex; align-items: center; gap: 6px; animation: fadeUp 0.5s ease both; }
+.progress-step { display: flex; align-items: center; gap: 8px; opacity: 0.4; transition: opacity 0.25s; }
+.progress-step.active, .progress-step.done { opacity: 1; }
+.progress-num { width: 26px; height: 26px; border-radius: 50%; background: var(--surface2); border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700; color: var(--text2); flex-shrink: 0; transition: all 0.25s; }
+.progress-step.active .progress-num { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 0 12px var(--glow); }
+.progress-step.done .progress-num { background: rgba(72,187,120,0.15); border-color: var(--success); color: var(--success); }
+.progress-label { font-size: 0.8rem; font-weight: 700; color: var(--text2); white-space: nowrap; }
+.progress-step.active .progress-label { color: var(--text); }
+.progress-line { width: clamp(20px, 6vw, 46px); height: 2px; background: var(--border); border-radius: 2px; }
+
+/* ═══ HERO TEXT ═══ */
+.phase-head { text-align: center; display: flex; flex-direction: column; gap: 8px; animation: fadeUp 0.5s ease 0.05s both; }
+.hero-eyebrow { display: inline-flex; align-self: center; align-items: center; gap: 8px; padding: 6px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 50px; font-size: 0.78rem; color: var(--accent2); font-weight: 700; }
+.phase-head h1 { font-size: clamp(1.35rem, 3.4vh, 2rem); font-weight: 900; letter-spacing: -0.02em; line-height: 1.2; background: linear-gradient(135deg, var(--text), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.phase-head p { color: var(--text2); font-size: 0.9rem; line-height: 1.55; max-width: 480px; margin: 0 auto; }
+
+.back-link { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; color: var(--text3); text-decoration: none; font-size: 0.82rem; font-weight: 700; background: transparent; border: none; cursor: pointer; font-family: 'Tajawal', sans-serif; transition: color 0.2s; padding: 4px 0; }
+.back-link:hover { color: var(--accent2); }
+.back-link i { font-size: 0.7rem; }
+
+.view { display: none; width: 100%; flex-direction: column; align-items: center; gap: clamp(14px, 2.5vh, 22px); }
+.view.on { display: flex; }
+
+/* ═══ READERS GRID ═══ */
+.readers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; width: 100%; animation: fadeUp 0.5s ease 0.1s both; }
+.reader-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px 12px; display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; transition: all 0.2s; text-align: center; }
+.reader-card:hover { border-color: var(--border-h); transform: translateY(-3px); box-shadow: 0 10px 26px rgba(0,0,0,0.28); }
+.reader-avatar { width: 58px; height: 58px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; font-weight: 900; color: #fff; flex-shrink: 0; }
+.reader-name { font-size: 0.9rem; font-weight: 700; line-height: 1.3; }
+.reader-meta { font-size: 0.7rem; color: var(--text3); display: flex; align-items: center; gap: 5px; }
+.reader-loading, .empty-note { color: var(--text3); font-size: 0.88rem; padding: 30px 0; text-align: center; }
+
+/* ═══ AYAH CARDS ═══ */
+.selected-chip { display: inline-flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 50px; padding: 6px 14px 6px 6px; font-size: 0.82rem; font-weight: 700; color: var(--text2); align-self: center; }
+.selected-chip .chip-avatar { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 900; color: #fff; }
+
+.ayahs-list { display: flex; flex-direction: column; gap: 10px; width: 100%; animation: fadeUp 0.5s ease 0.1s both; }
+.ayah-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: 16px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; transition: all 0.2s; }
+.ayah-card:hover { border-color: var(--border-h); }
+.ayah-card.selected { border-color: var(--accent); background: rgba(79,142,247,0.06); box-shadow: 0 0 0 1px var(--accent) inset; }
+.ayah-card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ayah-surah-tag { font-size: 0.72rem; font-weight: 700; color: var(--accent2); background: rgba(79,142,247,0.1); padding: 3px 10px; border-radius: 20px; }
+.ayah-pick-dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border-h); flex-shrink: 0; transition: all 0.2s; position: relative; }
+.ayah-card.selected .ayah-pick-dot { border-color: var(--accent); background: var(--accent); }
+.ayah-card.selected .ayah-pick-dot::after { content: '\f00c'; font-family: 'Font Awesome 6 Free'; font-weight: 900; color: #fff; font-size: 10px; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.ayah-text { font-size: 1.15rem; line-height: 2.1; text-align: center; padding: 4px 4px; }
+.ayah-ref-player { display: flex; align-items: center; gap: 10px; }
+.ayah-ref-player audio { flex: 1; height: 34px; }
+.ref-fallback-note { font-size: 0.72rem; color: var(--text3); display: none; align-items: center; gap: 6px; }
+
+.continue-bar { display: flex; justify-content: center; width: 100%; animation: fadeUp 0.5s ease 0.15s both; }
+.btn { border: none; border-radius: 11px; font-family: 'Tajawal', sans-serif; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: all 0.2s; padding: 12px 26px; }
+.btn-go { background: linear-gradient(135deg, var(--accent), #3a7aee); color: #fff; box-shadow: 0 0 14px var(--glow); display: flex; align-items: center; gap: 8px; }
+.btn-go:hover:not(:disabled) { box-shadow: 0 0 24px rgba(79,142,247,0.5); transform: translateY(-1px); }
+.btn-go:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* ═══ RECORD PANEL ═══ */
+.ayah-display-card { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; animation: fadeUp 0.5s ease 0.05s both; }
+.ayah-display-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ayah-display-text { font-size: 1.2rem; line-height: 2.1; text-align: center; }
+.listen-again-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; color: var(--accent2); font-family: 'Tajawal', sans-serif; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.listen-again-btn:hover { background: rgba(79,142,247,0.1); border-color: var(--border-h); }
+.listen-again-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.record-panel { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 22px 20px; display: flex; flex-direction: column; align-items: center; gap: 16px; animation: fadeUp 0.5s ease 0.1s both; }
+.record-mode-toggle { display: flex; gap: 6px; background: var(--surface2); border-radius: 10px; padding: 4px; width: 100%; max-width: 280px; }
+.record-mode-btn { flex: 1; padding: 8px 10px; border: none; background: transparent; color: var(--text2); font-family: 'Tajawal', sans-serif; font-size: 0.8rem; font-weight: 700; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+.record-mode-btn.active { background: var(--accent); color: #fff; }
+
+.record-stage { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
+.record-btn-wrap { position: relative; width: 84px; height: 84px; }
+.record-btn { width: 84px; height: 84px; border-radius: 50%; border: none; background: linear-gradient(135deg, var(--error), #c53030); color: #fff; font-size: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.15s; }
+.record-btn:hover { transform: scale(1.04); }
+.record-btn.recording { animation: pulseRing 1.6s infinite; }
+.record-btn.recording i::before { content: '\f04d'; } /* stop icon */
+.record-timer { font-size: 1.05rem; font-weight: 900; color: var(--text); font-variant-numeric: tabular-nums; }
+.record-hint { font-size: 0.78rem; color: var(--text3); text-align: center; }
+.waveform { display: flex; align-items: center; justify-content: center; gap: 3px; height: 30px; }
+.waveform span { width: 3px; height: 8px; border-radius: 2px; background: var(--accent2); display: none; }
+.waveform.on span { display: block; animation: barPulse 0.9s ease-in-out infinite; }
+.waveform span:nth-child(1){animation-delay:0s} .waveform span:nth-child(2){animation-delay:.1s} .waveform span:nth-child(3){animation-delay:.2s} .waveform span:nth-child(4){animation-delay:.3s} .waveform span:nth-child(5){animation-delay:.15s} .waveform span:nth-child(6){animation-delay:.35s} .waveform span:nth-child(7){animation-delay:.05s} .waveform span:nth-child(8){animation-delay:.25s}
+
+.upload-zone { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.file-label { display: flex; align-items: center; gap: 8px; padding: 14px 16px; background: var(--surface2); border: 1.5px dashed rgba(79,142,247,0.45); border-radius: 12px; cursor: pointer; font-size: 0.85rem; color: var(--text2); font-weight: 500; width: 100%; justify-content: center; transition: background 0.2s, border-color 0.2s; }
+.file-label:hover { background: rgba(79,142,247,0.08); border-color: var(--accent2); }
+input[type=file] { display: none; }
+
+.preview-box { width: 100%; display: none; flex-direction: column; gap: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+.preview-box.show { display: flex; }
+.preview-box-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.preview-box-title { font-size: 0.82rem; font-weight: 700; color: var(--success); display: flex; align-items: center; gap: 6px; }
+.redo-link { background: transparent; border: none; color: var(--text3); font-family: 'Tajawal', sans-serif; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
+.redo-link:hover { color: var(--error); }
+.preview-box audio { width: 100%; height: 34px; }
+
+.mic-error { display: none; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--error); background: rgba(245,101,101,0.08); border: 1px solid rgba(245,101,101,0.2); border-radius: 8px; padding: 8px 12px; width: 100%; }
+.mic-error.show { display: flex; }
+
+.submit-bar { display: flex; gap: 10px; width: 100%; }
+
+/* ═══ LOADING ═══ */
+.loading-view { display: none; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 60px 20px; }
+.loading-view.on { display: flex; }
+.spinner { width: 44px; height: 44px; border: 3px solid var(--surface2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+.loading-view p { color: var(--text2); font-size: 0.95rem; text-align: center; }
+
+/* ═══ ERROR ═══ */
+.err-view { display: none; align-items: center; justify-content: center; padding: 40px 20px; }
+.err-view.on { display: flex; }
+.err-box { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 22px 26px; background: rgba(245,101,101,0.08); border: 1px solid rgba(245,101,101,0.25); border-radius: 14px; color: var(--error); font-size: 0.9rem; text-align: center; max-width: 420px; }
+.err-retry-btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 20px; background: transparent; border: 1px solid rgba(79,142,247,0.3); border-radius: 9px; color: var(--accent2); font-family: 'Tajawal', sans-serif; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.err-retry-btn:hover { background: rgba(79,142,247,0.1); border-color: var(--border-h); }
+
+/* ═══ RESULT ═══ */
+.result-view { display: none; flex-direction: column; align-items: center; gap: 18px; width: 100%; }
+.result-view.on { display: flex; }
+.gauge-wrap { position: relative; width: 178px; height: 178px; display: flex; align-items: center; justify-content: center; animation: fadeUp 0.5s ease both; }
+.gauge-wrap svg { width: 178px; height: 178px; transform: rotate(-90deg); }
+.gauge-track { fill: none; stroke: var(--surface2); stroke-width: 12; }
+.gauge-fill { fill: none; stroke-width: 12; stroke-linecap: round; transition: stroke-dashoffset 1.1s cubic-bezier(0.16,1,0.3,1); }
+.gauge-center { position: absolute; display: flex; flex-direction: column; align-items: center; }
+.gauge-pct { font-size: 2.1rem; font-weight: 900; }
+.gauge-label { font-size: 0.7rem; color: var(--text3); font-weight: 700; }
+
+.result-headline { text-align: center; display: flex; flex-direction: column; gap: 6px; animation: fadeUp 0.5s ease 0.05s both; }
+.result-headline h2 { font-size: 1.25rem; font-weight: 900; line-height: 1.4; }
+.result-headline p { color: var(--text2); font-size: 0.88rem; max-width: 440px; margin: 0 auto; line-height: 1.6; }
+.result-tip { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px; font-size: 0.8rem; color: var(--text2); animation: fadeUp 0.5s ease 0.1s both; }
+.result-tip i { color: var(--warn); flex-shrink: 0; }
+
+.result-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; width: 100%; animation: fadeUp 0.5s ease 0.15s both; }
+.btn-outline { display: flex; align-items: center; gap: 8px; padding: 11px 20px; border: 1px solid var(--border); border-radius: 11px; color: var(--text2); text-decoration: none; font-size: 0.85rem; font-weight: 700; font-family: 'Tajawal', sans-serif; background: transparent; cursor: pointer; transition: all 0.2s; }
+.btn-outline:hover { border-color: var(--border-h); color: var(--text); background: rgba(79,142,247,0.06); }
+.btn-outline.primary-tint { color: var(--accent2); border-color: rgba(79,142,247,0.25); }
+
+/* ═══ FOOTER ═══ */
+.footer { direction: rtl; font-family: 'Tajawal', sans-serif; background: #0a0e1a; border-top: 1px solid rgba(100,140,255,0.1); min-height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 10px 16px; position: relative; z-index: 1; }
+.footer-content { display:flex; align-items:center; gap:16px; flex-wrap:wrap; justify-content: center; }
+.footer-copy { color:#5a6a8a; font-size:0.78rem; }
+.footer-link { color:#5a6a8a; font-size:0.78rem; text-decoration:none; transition:0.2s; }
+.footer-link:hover { color:#7eb3ff; }
+.footer-sep { color:#1e2a3a; }
+
+@media (max-width: 640px) {
+  .topbar { padding: 12px 16px; }
+  .stage { padding: 16px 14px 30px; }
+  .progress-label { display: none; }
+  .readers-grid { grid-template-columns: repeat(2, 1fr); }
+  .submit-bar { flex-direction: column; }
+  .result-actions { flex-direction: column; width: 100%; max-width: 320px; }
+  .btn-outline { justify-content: center; width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ NAVBAR ═══ -->
+<header class="topbar">
+  <a href="/" class="logo">
+<svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="10%" y1="0%" x2="90%" y2="100%">
+      <stop offset="0%" stop-color="#1E40AF"/>
+      <stop offset="100%" stop-color="#172554"/>
+    </linearGradient>
+  </defs>
+  <path d="M254.8,486.2c-49.4,0-95.2-15.2-133.1-41.1c-17.9,9.4-58.1,11.5-75.6,9.4c-25.5-3-52.2-24.1-26.5-44.7c39.9-31.8,29.2-44.4,29.2-44.4c-19.1-34.1-30-73.5-30-115.4c0-130.4,105.7-236.2,236.1-236.2c130.4,0,236.1,105.7,236.1,236.2S385.2,486.2,254.8,486.2z M254.8,48.4c-112.1,0-203,90.9-203,203.1c0,38.6,10.8,74.7,29.5,105.4c0,0,13.3,34.5-20.8,60.2c21.4,7.2,66.5-6,68.8-6c34.5,27.2,78.1,43.5,125.5,43.5c112.1,0,203-90.9,203-203.1S366.9,48.4,254.8,48.4z" fill="url(#bg)"/>
+  <path d="M254.8,48.4c-112.1,0-203,90.9-203,203.1c0,38.6,10.8,74.7,29.5,105.4c0,0,13.3,34.5-20.8,60.2c21.4,7.2,66.5-6,68.8-6c34.5,27.2,78.1,43.5,125.5,43.5c112.1,0,203-90.9,203-203.1S366.9,48.4,254.8,48.4z" fill="white"/>
+  <path d="M110 258 C130 258, 130 212, 150 212 C170 212, 170 304, 190 304 C210 304, 210 142, 230 142 C250 142, 250 332, 270 332 C290 332, 290 182, 310 182 C330 182, 330 282, 350 282 C370 282, 370 258, 390 258" fill="none" stroke="url(#bg)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+    <span class="logo-name">LIKETWIN</span>
+  </a>
+  <nav class="nav-links">
+    <a href="/" class="nav-link">الرئيسية</a>
+    <a href="/practice" class="nav-link active">تدرب على التقليد</a>
+    <a href="/pricing" class="nav-link">الأسعار</a>
+    <a href="/dashboard" class="nav-link dash" id="navDashboard"><i class="fa-solid fa-gauge"></i> لوحتي</a>
+  </nav>
+</header>
+
+<!-- ═══ STAGE ═══ -->
+<div class="stage">
+  <div class="wrap">
+
+    <div class="progress-track" id="progressTrack">
+      <div class="progress-step active" data-step="1"><span class="progress-num">1</span><span class="progress-label">القارئ</span></div>
+      <div class="progress-line"></div>
+      <div class="progress-step" data-step="2"><span class="progress-num">2</span><span class="progress-label">الآية</span></div>
+      <div class="progress-line"></div>
+      <div class="progress-step" data-step="3"><span class="progress-num">3</span><span class="progress-label">التسجيل</span></div>
+    </div>
+
+    <!-- ═══ STEP 1: اختيار القارئ ═══ -->
+    <section class="view on" id="vReaders">
+      <div class="phase-head">
+        <div class="hero-eyebrow"><i class="fa-solid fa-microphone-lines"></i> تدرب على تقليد القرّاء</div>
+        <h1>اختر القارئ الذي تريد تقليد صوته</h1>
+        <p>استمع لتلاوته، سجّل صوتك وقارِن مدى تطابقه معه بعد كل محاولة</p>
+      </div>
+      <div class="readers-grid" id="readersGrid">
+        <div class="reader-loading"><i class="fa-solid fa-spinner fa-spin"></i> جاري تحميل القرّاء...</div>
+      </div>
+    </section>
+
+    <!-- ═══ STEP 2: اختيار الآية ═══ -->
+    <section class="view" id="vAyahs">
+      <button type="button" class="back-link" onclick="goToStep(1)"><i class="fa-solid fa-arrow-right"></i> رجوع لاختيار القارئ</button>
+      <div class="phase-head">
+        <div class="selected-chip" id="selectedChip"></div>
+        <h1>اختر آية للتدرب عليها</h1>
+        <p>استمع لتلاوة القارئ للآية أكثر من مرة قبل اختيارها والانتقال للتسجيل</p>
+      </div>
+      <div class="ayahs-list" id="ayahsList"></div>
+      <div class="continue-bar">
+        <button type="button" class="btn btn-go" id="btnToRecord" disabled>
+          التالي: التسجيل <i class="fa-solid fa-arrow-left"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- ═══ STEP 3: التسجيل ═══ -->
+    <section class="view" id="vRecord">
+      <button type="button" class="back-link" onclick="goToStep(2)"><i class="fa-solid fa-arrow-right"></i> رجوع لاختيار آية أخرى</button>
+
+      <div class="ayah-display-card">
+        <div class="ayah-display-top">
+          <span class="selected-chip" id="selectedChip2"></span>
+          <span class="ayah-surah-tag" id="ayahTagDisplay"></span>
+        </div>
+        <div class="ayah-display-text" id="ayahTextDisplay"></div>
+        <audio id="refAudioRecordStep" style="display:none" preload="none"></audio>
+        <button type="button" class="listen-again-btn" id="btnListenAgain">
+          <i class="fa-solid fa-play"></i> استمع لتلاوة القارئ
+        </button>
+        <div class="ref-fallback-note" id="refFallbackNote">
+          <i class="fa-solid fa-circle-info"></i> سيتم تفعيل تشغيل التسجيل المرجعي عند ربط الصفحة بالخادم
+        </div>
+      </div>
+
+      <div class="record-panel">
+        <div class="record-mode-toggle">
+          <button type="button" class="record-mode-btn active" id="modeRecordBtn" onclick="setRecordMode('record')">
+            <i class="fa-solid fa-microphone"></i> تسجيل مباشر
+          </button>
+          <button type="button" class="record-mode-btn" id="modeUploadBtn" onclick="setRecordMode('upload')">
+            <i class="fa-solid fa-upload"></i> رفع ملف
+          </button>
+        </div>
+
+        <!-- وضع التسجيل المباشر -->
+        <div class="record-stage" id="recordStage">
+          <div class="waveform" id="waveform">
+            <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <div class="record-btn-wrap">
+            <button type="button" class="record-btn" id="recordBtn" aria-label="تسجيل"><i class="fa-solid fa-microphone"></i></button>
+          </div>
+          <div class="record-timer" id="recordTimer">0:00</div>
+          <p class="record-hint" id="recordHint">اضغط على الميكروفون وابدأ بتلاوة الآية (بحد أقصى 30 ثانية)</p>
+          <div class="mic-error" id="micError"><i class="fa-solid fa-triangle-exclamation"></i> <span id="micErrorText"></span></div>
+        </div>
+
+        <!-- وضع رفع ملف -->
+        <div class="upload-zone" id="uploadZone" style="display:none;">
+          <label class="file-label" for="uploadInput">
+            <i class="fa-solid fa-file-audio"></i> اختر ملفاً صوتياً من جهازك (mp3, wav, m4a...)
+          </label>
+          <input type="file" id="uploadInput" accept="audio/*">
+        </div>
+
+        <!-- معاينة الصوت المسجّل/المرفوع -->
+        <div class="preview-box" id="previewBox">
+          <div class="preview-box-top">
+            <span class="preview-box-title"><i class="fa-solid fa-circle-check"></i> جاهز للإرسال</span>
+            <button type="button" class="redo-link" id="btnRedo" onclick="resetRecording()">إعادة المحاولة</button>
+          </div>
+          <audio id="previewAudio" controls></audio>
+        </div>
+
+        <div class="submit-bar">
+          <button type="button" class="btn btn-go" id="btnSubmit" style="flex:1;" disabled>
+            <i class="fa-solid fa-wand-magic-sparkles"></i> قارن صوتي الآن
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ LOADING ═══ -->
+    <div class="loading-view" id="vLoading">
+      <div class="spinner"></div>
+      <p id="loadingMsg">نحلل تسجيلك ونقارنه بتلاوة القارئ المرجعية...</p>
+    </div>
+
+    <!-- ═══ ERROR ═══ -->
+    <div class="err-view" id="vErr">
+      <div class="err-box">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span id="errMsg">حدث خطأ.</span>
+        </div>
+        <button type="button" class="err-retry-btn" onclick="goToStep(3)">
+          <i class="fa-solid fa-rotate-right"></i> المحاولة مرة أخرى
+        </button>
+      </div>
+    </div>
+
+    <!-- ═══ RESULT ═══ -->
+    <div class="result-view" id="vResult">
+      <div class="gauge-wrap">
+        <svg viewBox="0 0 178 178">
+          <circle class="gauge-track" cx="89" cy="89" r="78"></circle>
+          <circle class="gauge-fill" id="gaugeFill" cx="89" cy="89" r="78" stroke="#48bb78" stroke-dasharray="490" stroke-dashoffset="490"></circle>
+        </svg>
+        <div class="gauge-center">
+          <span class="gauge-pct" id="gaugePct">0%</span>
+          <span class="gauge-label">نسبة التطابق</span>
+        </div>
+      </div>
+      <div class="result-headline">
+        <h2 id="resultHeadline"></h2>
+        <p id="resultSub"></p>
+      </div>
+      <div class="result-tip" id="resultTip" style="display:none;">
+        <i class="fa-solid fa-lightbulb"></i> <span id="resultTipText"></span>
+      </div>
+      <div class="result-actions">
+        <button type="button" class="btn-outline primary-tint" onclick="retrySameAyah()">
+          <i class="fa-solid fa-rotate-right"></i> حاول بنفس الآية
+        </button>
+        <button type="button" class="btn-outline" onclick="goToStep(2)">
+          <i class="fa-solid fa-book-quran"></i> جرّب آية أخرى
+        </button>
+        <button type="button" class="btn-outline" onclick="goToStep(1)">
+          <i class="fa-solid fa-user-group"></i> غيّر القارئ
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /stage -->
+
+<footer class="footer">
+  <div class="footer-content">
+    <span class="footer-copy"><i class="fa-solid fa-copyright"></i> 2026 LIKETWIN</span>
+    <span class="footer-sep">|</span>
+    <a href="/privacy" class="footer-link">سياسة الخصوصية</a>
+    <span class="footer-sep">|</span>
+    <a href="https://wa.me/212603074384" target="_blank" rel="noopener noreferrer" class="footer-link">تواصل</a>
+  </div>
+</footer>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   عقد الـ API المتوقع مع الباك أند (يمكن تعديل المسارات لاحقاً):
+   - GET  {API}/practice/readers
+       → { readers: [ { id, name, ayah_count }, ... ] }
+   - GET  {API}/practice/readers/{reader_id}/ayahs
+       → { ayahs: [ { id, surah, range, text, audio_url }, ... ] }  (3 عناصر)
+   - POST {API}/practice/submit   (multipart/form-data)
+       body: reader_id, ayah_id, file=<تسجيل بصيغة wav>
+       → { status:'success', similarity_percent: 0-100, message, tip }
+       → { status:'error', message }
+   إلى حين تفعيل الباك أند، تعتمد هذه الصفحة على بيانات تجريبية محلية
+   (MOCK_READERS) ونتيجة تجريبية عشوائية عند فشل الاتصال بالخادم —
+   ابحث عن "MOCK" و"FALLBACK" أدناه لإزالتها عند الربط الفعلي.
+══════════════════════════════════════════════════════════════════ */
+
+function authHeaders() {
+  let t = null;
+  try { t = sessionStorage.getItem('lt_bearer'); } catch (e) {}
+  return t ? { 'Authorization': 'Bearer ' + t } : {};
+}
+
+/* حالة تسجيل الدخول — تتحكم فقط بظهور رابط "لوحتي" في الشريط العلوي */
+async function checkUserStatus() {
+  const html = document.documentElement;
+  try {
+    const res = await fetch(`${CONFIG.API}/get_user_info`, { credentials: 'include', headers: authHeaders() });
+    const data = await res.json();
+    if (data.status === 'ok' && data.user) {
+      html.classList.remove('auth-out'); html.classList.add('auth-in');
+      try { localStorage.setItem('lt_auth', 'in'); } catch (e) {}
+      return;
+    }
+  } catch (e) {}
+  html.classList.remove('auth-in'); html.classList.add('auth-out');
+  try { localStorage.setItem('lt_auth', 'out'); } catch (e) {}
+}
+checkUserStatus();
+
+/* ══════════════════════════════════════
+   بيانات تجريبية (MOCK) — تُستخدم فقط إن تعذّر الوصول لـ /practice/readers
+══════════════════════════════════════ */
+const AVATAR_COLORS = ['#4f8ef7','#38a169','#d97706','#9333ea','#0891b2','#e11d48','#65a30d','#7c3aed'];
+const MOCK_READERS = [
+  { id:'saad_alghamdi', name:'سعد الغامدي', ayah_count:3 },
+  { id:'mishary_alafasy', name:'مشاري راشد العفاسي', ayah_count:3 },
+  { id:'abdulbasit', name:'عبد الباسط عبد الصمد', ayah_count:3 },
+  { id:'sudais', name:'عبد الرحمن السديس', ayah_count:3 },
+  { id:'maher_almuaiqly', name:'ماهر المعيقلي', ayah_count:3 },
+  { id:'yasser_aldosari', name:'ياسر الدوسري', ayah_count:3 },
+];
+const MOCK_AYAHS = {
+  _default: [
+    { id:'a1', surah:'الفاتحة', range:'1 - 4', text:'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ ﴿١﴾ الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ ﴿٢﴾ الرَّحْمَٰنِ الرَّحِيمِ ﴿٣﴾ مَالِكِ يَوْمِ الدِّينِ ﴿٤﴾', audio_url:'/practice/audio/sample/a1.mp3' },
+    { id:'a2', surah:'الشرح', range:'1 - 6', text:'أَلَمْ نَشْرَحْ لَكَ صَدْرَكَ ﴿١﴾ وَوَضَعْنَا عَنكَ وِزْرَكَ ﴿٢﴾ الَّذِي أَنقَضَ ظَهْرَكَ ﴿٣﴾ وَرَفَعْنَا لَكَ ذِكْرَكَ ﴿٤﴾', audio_url:'/practice/audio/sample/a2.mp3' },
+    { id:'a3', surah:'الإخلاص', range:'1 - 4', text:'قُلْ هُوَ اللَّهُ أَحَدٌ ﴿١﴾ اللَّهُ الصَّمَدُ ﴿٢﴾ لَمْ يَلِدْ وَلَمْ يُولَدْ ﴿٣﴾ وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ ﴿٤﴾', audio_url:'/practice/audio/sample/a3.mp3' },
+  ]
+};
+
+/* ══════════════════════════════════════
+   الحالة العامة
+══════════════════════════════════════ */
+let readers = [];
+let ayahsForReader = [];
+let selectedReader = null;
+let selectedAyah = null;
+let recordMode = 'record';
+let recordedWavBlob = null;
+
+/* ══════════════════════════════════════
+   أدوات مساعدة للعرض
+══════════════════════════════════════ */
+function esc(str) { const d = document.createElement('div'); d.textContent = String(str); return d.innerHTML; }
+function avatarColorFor(id) { let h = 0; for (let i=0;i<id.length;i++) h = (h*31 + id.charCodeAt(i)) >>> 0; return AVATAR_COLORS[h % AVATAR_COLORS.length]; }
+function initialsFor(name) { return (name || '').trim().split(/\s+/)[0]?.slice(0,1) || '؟'; }
+
+function goToStep(n) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('on'));
+  document.getElementById('vLoading').classList.remove('on');
+  document.getElementById('vErr').classList.remove('on');
+  document.getElementById('vResult').classList.remove('on');
+  document.getElementById('progressTrack').style.display = 'flex';
+
+  if (n === 1) document.getElementById('vReaders').classList.add('on');
+  if (n === 2) { renderAyahs(); document.getElementById('vAyahs').classList.add('on'); }
+  if (n === 3) { prepareRecordStep(); document.getElementById('vRecord').classList.add('on'); }
+
+  document.querySelectorAll('.progress-step').forEach(el => {
+    const s = parseInt(el.dataset.step, 10);
+    el.classList.toggle('active', s === n);
+    el.classList.toggle('done', s < n);
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showLoading(msg) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('on'));
+  document.getElementById('vErr').classList.remove('on');
+  document.getElementById('vResult').classList.remove('on');
+  document.getElementById('progressTrack').style.display = 'none';
+  document.getElementById('loadingMsg').textContent = msg || 'جاري المعالجة...';
+  document.getElementById('vLoading').classList.add('on');
+}
+
+function showError(msg) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('on'));
+  document.getElementById('vLoading').classList.remove('on');
+  document.getElementById('vResult').classList.remove('on');
+  document.getElementById('progressTrack').style.display = 'none';
+  document.getElementById('errMsg').textContent = msg || 'حدث خطأ غير متوقع.';
+  document.getElementById('vErr').classList.add('on');
+}
+
+/* ══════════════════════════════════════
+   STEP 1 — تحميل وعرض القرّاء
+══════════════════════════════════════ */
+async function loadReaders() {
+  try {
+    const res = await fetch(`${CONFIG.API}/practice/readers`, { credentials: 'include', headers: authHeaders() });
+    if (!res.ok) throw new Error('bad status');
+    const data = await res.json();
+    if (!data.readers || !data.readers.length) throw new Error('empty');
+    readers = data.readers;
+  } catch (e) {
+    // FALLBACK: الخادم غير جاهز بعد — نستخدم قائمة تجريبية محلية
+    readers = MOCK_READERS;
+  }
+  renderReadersGrid();
+}
+
+function renderReadersGrid() {
+  const grid = document.getElementById('readersGrid');
+  if (!readers.length) {
+    grid.innerHTML = '<div class="empty-note">لا يوجد قرّاء متاحون حالياً.</div>';
+    return;
+  }
+  grid.innerHTML = readers.map(r => `
+    <div class="reader-card" onclick="selectReader('${r.id}')">
+      <div class="reader-avatar" style="background:${avatarColorFor(r.id)}">${esc(initialsFor(r.name))}</div>
+      <div class="reader-name">${esc(r.name)}</div>
+      <div class="reader-meta"><i class="fa-solid fa-book-quran"></i> ${r.ayah_count || 3} آيات للتدرب</div>
+    </div>
+  `).join('');
+}
+
+async function selectReader(id) {
+  selectedReader = readers.find(r => r.id === id) || { id, name: id };
+  selectedAyah = null;
+  document.getElementById('selectedChip').innerHTML =
+    `<span class="chip-avatar" style="background:${avatarColorFor(selectedReader.id)}">${esc(initialsFor(selectedReader.name))}</span> ${esc(selectedReader.name)}`;
+
+  const list = document.getElementById('ayahsList');
+  list.innerHTML = '<div class="reader-loading"><i class="fa-solid fa-spinner fa-spin"></i> جاري تحميل الآيات...</div>';
+  document.getElementById('btnToRecord').disabled = true;
+  goToStep(2);
+
+  try {
+    const res = await fetch(`${CONFIG.API}/practice/readers/${encodeURIComponent(id)}/ayahs`, { credentials: 'include', headers: authHeaders() });
+    if (!res.ok) throw new Error('bad status');
+    const data = await res.json();
+    if (!data.ayahs || !data.ayahs.length) throw new Error('empty');
+    ayahsForReader = data.ayahs;
+  } catch (e) {
+    // FALLBACK: بيانات تجريبية محلية لحين ربط الباك أند
+    ayahsForReader = MOCK_AYAHS._default;
+  }
+  renderAyahs();
+}
+
+/* ══════════════════════════════════════
+   STEP 2 — عرض الآيات واختيار واحدة
+══════════════════════════════════════ */
+function renderAyahs() {
+  const list = document.getElementById('ayahsList');
+  if (!ayahsForReader.length) {
+    list.innerHTML = '<div class="empty-note">لا توجد آيات متاحة لهذا القارئ حالياً.</div>';
+    return;
+  }
+  list.innerHTML = ayahsForReader.map(a => `
+    <div class="ayah-card ${selectedAyah && selectedAyah.id === a.id ? 'selected' : ''}" data-id="${a.id}" onclick="pickAyah('${a.id}')">
+      <div class="ayah-card-top">
+        <span class="ayah-surah-tag">سورة ${esc(a.surah)} — آية ${esc(a.range)}</span>
+        <span class="ayah-pick-dot"></span>
+      </div>
+      <div class="ayah-text">${esc(a.text)}</div>
+      <div class="ayah-ref-player">
+        <audio controls preload="none" onerror="this.nextElementSibling.style.display='flex'; this.style.display='none';">
+          <source src="${aurl(a.audio_url)}">
+        </audio>
+        <span class="ref-fallback-note"><i class="fa-solid fa-circle-info"></i> سيتم تفعيل الاستماع عند ربط الباك أند</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function pickAyah(id) {
+  selectedAyah = ayahsForReader.find(a => a.id === id);
+  document.querySelectorAll('.ayah-card').forEach(el => el.classList.toggle('selected', el.dataset.id === id));
+  document.getElementById('btnToRecord').disabled = !selectedAyah;
+}
+
+function aurl(u) { if (!u) return ''; return u.startsWith('http') ? u : (CONFIG.API || '') + u; }
+
+document.getElementById('btnToRecord').addEventListener('click', () => {
+  if (!selectedAyah) return;
+  goToStep(3);
+});
+
+/* ══════════════════════════════════════
+   STEP 3 — التسجيل / الرفع
+══════════════════════════════════════ */
+function prepareRecordStep() {
+  if (!selectedReader || !selectedAyah) { goToStep(1); return; }
+
+  document.getElementById('selectedChip2').innerHTML =
+    `<span class="chip-avatar" style="background:${avatarColorFor(selectedReader.id)}">${esc(initialsFor(selectedReader.name))}</span> ${esc(selectedReader.name)}`;
+  document.getElementById('ayahTagDisplay').textContent = `سورة ${selectedAyah.surah} — آية ${selectedAyah.range}`;
+  document.getElementById('ayahTextDisplay').textContent = selectedAyah.text;
+
+  const refAudio = document.getElementById('refAudioRecordStep');
+  refAudio.src = aurl(selectedAyah.audio_url);
+  document.getElementById('refFallbackNote').style.display = 'none';
+
+  resetRecording();
+}
+
+document.getElementById('btnListenAgain').addEventListener('click', () => {
+  const refAudio = document.getElementById('refAudioRecordStep');
+  const note = document.getElementById('refFallbackNote');
+  refAudio.currentTime = 0;
+  refAudio.play().catch(() => { note.style.display = 'flex'; });
+});
+document.getElementById('refAudioRecordStep').addEventListener('error', () => {
+  document.getElementById('refFallbackNote').style.display = 'flex';
+});
+
+function setRecordMode(mode) {
+  recordMode = mode;
+  document.getElementById('modeRecordBtn').classList.toggle('active', mode === 'record');
+  document.getElementById('modeUploadBtn').classList.toggle('active', mode === 'upload');
+  document.getElementById('recordStage').style.display = mode === 'record' ? 'flex' : 'none';
+  document.getElementById('uploadZone').style.display = mode === 'upload' ? 'flex' : 'none';
+  resetRecording();
+}
+
+function resetRecording() {
+  recordedWavBlob = null;
+  document.getElementById('previewBox').classList.remove('show');
+  document.getElementById('btnSubmit').disabled = true;
+  document.getElementById('recordTimer').textContent = '0:00';
+  document.getElementById('recordHint').textContent = 'اضغط على الميكروفون وابدأ بتلاوة الآية (بحد أقصى 30 ثانية)';
+  document.getElementById('micError').classList.remove('show');
+  document.getElementById('uploadInput').value = '';
+  const wf = document.getElementById('waveform'); wf.classList.remove('on');
+  const btn = document.getElementById('recordBtn');
+  btn.classList.remove('recording');
+  btn.querySelector('i').className = 'fa-solid fa-microphone';
+  if (isRecording) stopRecordingRaw();
+}
+
+/* ══ تحويل أي صوت إلى WAV (PCM 16-bit) عبر Web Audio API ══ */
+async function blobToWav(blob) {
+  const arrayBuf = await blob.arrayBuffer();
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  const ctx = new AudioCtx();
+  const audioBuf = await ctx.decodeAudioData(arrayBuf.slice(0));
+  const wavBlob = encodeWavFromBuffer(audioBuf);
+  ctx.close();
+  return wavBlob;
+}
+
+function encodeWavFromBuffer(audioBuffer) {
+  const numChannels = Math.min(audioBuffer.numberOfChannels, 2);
+  const sampleRate = audioBuffer.sampleRate;
+  const len = audioBuffer.length;
+  const bytesPerSample = 2;
+  const blockAlign = numChannels * bytesPerSample;
+  const dataSize = len * blockAlign;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+
+  function writeStr(offset, str) { for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i)); }
+
+  writeStr(0, 'RIFF');
+  view.setUint32(4, 36 + dataSize, true);
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * blockAlign, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, 16, true);
+  writeStr(36, 'data');
+  view.setUint32(40, dataSize, true);
+
+  const channels = [];
+  for (let c = 0; c < numChannels; c++) channels.push(audioBuffer.getChannelData(c));
+
+  let offset = 44;
+  for (let i = 0; i < len; i++) {
+    for (let c = 0; c < numChannels; c++) {
+      let sample = Math.max(-1, Math.min(1, channels[c][i]));
+      sample = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+      view.setInt16(offset, sample, true);
+      offset += 2;
+    }
+  }
+  return new Blob([buffer], { type: 'audio/wav' });
+}
+
+async function acceptRecordedSource(blob, label) {
+  try {
+    document.getElementById('recordHint').textContent = 'جاري تجهيز الملف بصيغة WAV...';
+    const wav = await blobToWav(blob);
+    recordedWavBlob = wav;
+    const url = URL.createObjectURL(wav);
+    document.getElementById('previewAudio').src = url;
+    document.getElementById('previewBox').classList.add('show');
+    document.getElementById('btnSubmit').disabled = false;
+    document.getElementById('recordHint').textContent = label || 'تم تجهيز التسجيل بصيغة WAV وجاهز للإرسال';
+  } catch (e) {
+    console.warn('WAV conversion failed:', e);
+    document.getElementById('micError').classList.add('show');
+    document.getElementById('micErrorText').textContent = 'تعذر معالجة الملف الصوتي، جرّب ملفاً أو تسجيلاً آخر.';
+  }
+}
+
+/* ══ التسجيل المباشر عبر الميكروفون ══ */
+let mediaRecorder = null, mediaChunks = [], mediaStream = null;
+let isRecording = false, recordStartTs = 0, recordTimerInt = null;
+const MAX_RECORD_SEC = 30;
+
+document.getElementById('recordBtn').addEventListener('click', async () => {
+  if (isRecording) { stopRecordingRaw(); return; }
+  document.getElementById('micError').classList.remove('show');
+
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (e) {
+    document.getElementById('micError').classList.add('show');
+    document.getElementById('micErrorText').textContent = 'تعذر الوصول للميكروفون — تأكد من السماح بالإذن من المتصفح.';
+    return;
+  }
+
+  mediaChunks = [];
+  const mimeCandidates = ['audio/webm', 'audio/ogg', 'audio/mp4'];
+  const mime = mimeCandidates.find(m => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || '';
+  mediaRecorder = mime ? new MediaRecorder(mediaStream, { mimeType: mime }) : new MediaRecorder(mediaStream);
+
+  mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) mediaChunks.push(e.data); };
+  mediaRecorder.onstop = async () => {
+    mediaStream.getTracks().forEach(t => t.stop());
+    const blob = new Blob(mediaChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+    await acceptRecordedSource(blob);
+  };
+
+  mediaRecorder.start();
+  isRecording = true;
+  recordStartTs = Date.now();
+  const btn = document.getElementById('recordBtn');
+  btn.classList.add('recording');
+  btn.querySelector('i').className = 'fa-solid fa-stop';
+  document.getElementById('waveform').classList.add('on');
+  document.getElementById('recordHint').textContent = 'جاري التسجيل... اضغط مرة أخرى للإيقاف';
+  document.getElementById('previewBox').classList.remove('show');
+  document.getElementById('btnSubmit').disabled = true;
+
+  recordTimerInt = setInterval(() => {
+    const sec = Math.floor((Date.now() - recordStartTs) / 1000);
+    document.getElementById('recordTimer').textContent = formatTime(sec);
+    if (sec >= MAX_RECORD_SEC) stopRecordingRaw();
+  }, 250);
+});
+
+function stopRecordingRaw() {
+  if (!isRecording) return;
+  isRecording = false;
+  clearInterval(recordTimerInt);
+  document.getElementById('waveform').classList.remove('on');
+  const btn = document.getElementById('recordBtn');
+  btn.classList.remove('recording');
+  btn.querySelector('i').className = 'fa-solid fa-microphone';
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+}
+
+function formatTime(sec) { const m = Math.floor(sec / 60); const s = sec % 60; return m + ':' + String(s).padStart(2, '0'); }
+
+/* ══ وضع رفع ملف ══ */
+document.getElementById('uploadInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  await acceptRecordedSource(file, `تم تجهيز "${file.name}" بصيغة WAV وجاهز للإرسال`);
+});
+
+/* ══════════════════════════════════════
+   إرسال التسجيل للمقارنة
+══════════════════════════════════════ */
+document.getElementById('btnSubmit').addEventListener('click', submitPractice);
+
+async function submitPractice() {
+  if (!recordedWavBlob || !selectedReader || !selectedAyah) return;
+  showLoading('نحلل تسجيلك ونقارنه بتلاوة ' + selectedReader.name + '...');
+
+  const fd = new FormData();
+  fd.append('reader_id', selectedReader.id);
+  fd.append('ayah_id', selectedAyah.id);
+  fd.append('file', recordedWavBlob, 'practice.wav');
+
+  try {
+    const res = await fetch(`${CONFIG.API}/practice/submit`, {
+      method: 'POST',
+      body: fd,
+      credentials: 'include',
+      headers: authHeaders(),
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      renderResult(data.similarity_percent, data.message, data.tip);
+      return;
+    }
+    showError(data.message || 'تعذر إتمام المقارنة، حاول مجدداً.');
+  } catch (e) {
+    // FALLBACK تجريبي: الخادم غير مربوط بعد — نعرض نتيجة عشوائية توضيحية
+    // فقط لاختبار الواجهة. يُحذف هذا الجزء بعد ربط /practice/submit فعلياً.
+    console.warn('[practice] submit failed, showing demo fallback result:', e);
+    const demoPct = Math.floor(Math.random() * 55) + 20; // 20-74 تقريباً كعرض توضيحي
+    renderResult(demoPct, null, null);
+  }
+}
+
+function renderResult(pct, message, tip) {
+  pct = Math.max(0, Math.min(100, Math.round(pct)));
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('on'));
+  document.getElementById('vLoading').classList.remove('on');
+  document.getElementById('vErr').classList.remove('on');
+  document.getElementById('progressTrack').style.display = 'none';
+
+  let color, headline, sub, tipText;
+  if (pct >= 80) {
+    color = '#48bb78';
+    headline = `أداء رائع! لقد نجحت في تقليد ${selectedReader.name} بنسبة ${pct}%`;
+    sub = 'صوتك قريب جداً من أسلوب هذا القارئ — واصل التدرب لتثبيت الإتقان.';
+    tipText = 'جرّب آية أطول أو من سورة أخرى لاختبار ثبات أسلوبك.';
+  } else if (pct >= 50) {
+    color = '#4f8ef7';
+    headline = `لقد نجحت في تقليد ${selectedReader.name} بنسبة ${pct}%`;
+    sub = 'بداية جيدة، تدرب أكثر على نبرة الصوت والمدود لرفع نسبة التطابق.';
+    tipText = 'استمع للتلاوة المرجعية مرة أخرى وركّز على مواضع المد والوقف قبل إعادة المحاولة.';
+  } else {
+    color = '#f6ad55';
+    headline = `نسبة تطابقك مع ${selectedReader.name} هي ${pct}%`;
+    sub = 'ما زلت في بداية الطريق، تدرب أكثر واستمع جيداً لأسلوب القارئ قبل إعادة التسجيل.';
+    tipText = 'حاول تسجيل صوتك في مكان هادئ والاقتراب أكثر من الميكروفون لصوت أوضح.';
+  }
+
+  document.getElementById('resultHeadline').textContent = message || headline;
+  document.getElementById('resultSub').textContent = sub;
+  if (tip || tipText) {
+    document.getElementById('resultTip').style.display = 'flex';
+    document.getElementById('resultTipText').textContent = tip || tipText;
+  } else {
+    document.getElementById('resultTip').style.display = 'none';
+  }
+
+  document.getElementById('gaugePct').textContent = pct + '%';
+  document.getElementById('gaugePct').style.color = color;
+  const fill = document.getElementById('gaugeFill');
+  fill.setAttribute('stroke', color);
+  const circumference = 2 * Math.PI * 78;
+  fill.setAttribute('stroke-dasharray', circumference.toFixed(1));
+  requestAnimationFrame(() => {
+    fill.style.strokeDashoffset = (circumference * (1 - pct / 100)).toFixed(1);
+  });
+
+  document.getElementById('vResult').classList.add('on');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function retrySameAyah() { resetRecording(); goToStep(3); }
+
+/* ══════════════════════════════════════
+   البدء
+══════════════════════════════════════ */
+loadReaders();
+</script>
+
+</body>
+</html>
