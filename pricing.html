@@ -318,6 +318,17 @@ body::before {
 .btn-free-start:hover { box-shadow: 0 0 30px rgba(0,229,176,0.45); transform: translateY(-2px); }
 .btn-free-start:active { transform: translateY(0); }
 
+/* ══════════════════════════════════════
+   ✅ حالة الانتظار: تُخفي الزر (بلا تغيير أبعاده أو تحريك باقي العناصر،
+   عبر visibility بدل display) إلى حين معرفة حالة المستخدم الحقيقية
+   (فعّل الخطة سابقاً أم لا) — فلا يُرى نص "ابدأ مجاناً" إطلاقاً قبل أن
+   يتحول لـ"تم التفعيل"، بنفس مبدأ إخفاء قسم الدفع (sectionBeforeSubmit)
+   الموجود أصلاً فـ المشروع لحين معرفة حالة تسجيل الدخول.
+══════════════════════════════════════ */
+.btn-free-start.pending-check {
+  visibility: hidden;
+}
+
 .btn-free-start.activated {
   background: linear-gradient(135deg, #0d2a20, #0a1e18) !important;
   box-shadow: none !important;
@@ -704,7 +715,7 @@ body::before {
               <span>مطابقة مع +500 قارئ</span>
             </div>
           </div>
-          <button class="btn-free-start" id="free-plan-btn" onclick="handleFreeStart()">
+          <button class="btn-free-start pending-check" id="free-plan-btn" onclick="handleFreeStart()">
             <i class="fa-solid fa-bolt"></i>
             ابدأ مجاناً
           </button>
@@ -1180,6 +1191,14 @@ function isFreePlanActiveLocally(userId) {
   }
 }
 
+// ✅ كشف الزر (إزالة حالة الانتظار) — تُستدعى فقط بعد أن نعرف بشكل مؤكد
+// أي نص يجب عرضه ("ابدأ مجاناً" أو "تم التفعيل")، فلا يُرى الزر إطلاقاً
+// وهو فـ حالة قد تتغيّر لاحقاً
+function revealFreeBtn() {
+  const btn = document.getElementById('free-plan-btn');
+  if (btn) btn.classList.remove('pending-check');
+}
+
 // ✅ فحص حالة المستخدم الحالي الخاصة (هل فعّل الخطة المجانية سابقاً؟) عبر
 // /check_free_plan — endpoint خفيف يقرأ عمود had_free لحساب هذا المستخدم
 // فقط (بلا أي COUNT عام). هذا منفصل تماماً عن حالة "sold_out" العامة:
@@ -1191,9 +1210,18 @@ function isFreePlanActiveLocally(userId) {
 // يبقى هذا الطلب ضرورياً حتى مع التخزين المحلي: فهو المصدر الوحيد للحقيقة
 // أول مرة (قبل أي تخزين محلي)، وهو الذي يملأ الذاكرة المحلية أصلاً عبر
 // markFreePlanActiveLocally أدناه.
+//
+// ✅ finally يضمن استدعاء revealFreeBtn() دائماً — نجاحاً أو فشلاً — فلا
+// يبقى الزر مخفياً إلى الأبد فـ أي سيناريو
 async function checkOwnFreePlanStatus(userId) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+
   try {
-    const res = await fetch(`${CONFIG.API}/check_free_plan`, { credentials: 'include' });
+    const res = await fetch(`${CONFIG.API}/check_free_plan`, {
+      credentials: 'include',
+      signal: controller.signal,
+    });
     if (!res.ok) return;
     const data = await res.json();
     if (data.status === 'ok' && data.active) {
@@ -1201,9 +1229,13 @@ async function checkOwnFreePlanStatus(userId) {
       markFreePlanActiveLocally(userId);
     }
   } catch {
-    // فشل الطلب — نترك الزر بحالته الافتراضية "ابدأ مجاناً"؛ إذا كان
-    // المستخدم مفعّلاً بالفعل وضغط الزر، سيرفضه /create_order برسالة
-    // واضحة ("لديك حساب مفعل مسبقاً") بدل منحه خطة مكررة
+    // فشل الطلب (بلا اتصال، مهلة منتهية، خطأ شبكة...) — نترك الزر
+    // بحالته الافتراضية "ابدأ مجاناً"؛ إذا كان المستخدم مفعّلاً بالفعل
+    // وضغط الزر، سيرفضه /create_order برسالة واضحة ("لديك حساب مفعل
+    // مسبقاً") بدل منحه خطة مكررة
+  } finally {
+    clearTimeout(timeoutId);
+    revealFreeBtn();
   }
 }
 
@@ -1214,6 +1246,10 @@ async function initPage() {
   if (!userId) {
     document.getElementById('sectionNotAuth').classList.add('visible');
     document.getElementById('userBadge').style.display = 'none';
+    // ✅ غير مسجّل دخول: الحالة الافتراضية "ابدأ مجاناً" صحيحة أصلاً
+    // وستبقى كما هي (لا يمكن أن تكون هذه الجلسة "مفعّلة")، فنكشف الزر
+    // مباشرة بلا أي انتظار إضافي
+    revealFreeBtn();
   } else {
     document.getElementById('sectionNotAuth').style.display = 'none';
     document.getElementById('sectionBeforeSubmit').style.display = 'flex';
@@ -1221,20 +1257,23 @@ async function initPage() {
     document.getElementById('badgeEmail').textContent = getDisplayLabel();
     document.getElementById('summaryEmail').textContent = getDisplayLabel();
 
-    // ✅ إصلاح الوميض (الزر يتغيّر من "ابدأ مجاناً" إلى "تم التفعيل" بعد
-    // ثانية تقريباً): إذا كانت الحالة محفوظة محلياً من زيارة سابقة، نُظهر
-    // "تم التفعيل" فوراً وبشكل متزامن هنا — بلا أي انتظار لرد الشبكة،
-    // فلا يُرى الزر إطلاقاً بحالته الافتراضية قبل التحديث
+    // ✅ إصلاح الوميض نهائياً (الزر لم يعد يظهر بأي حالة غير مؤكدة على
+    // الإطلاق): الزر يبقى مخفياً (class="pending-check") منذ تحميل
+    // الصفحة، ولا يُكشف إلا بعد معرفة الحالة النهائية بشكل مؤكد —
+    // مباشرة من الذاكرة المحلية إذا كانت محفوظة (بلا أي انتظار شبكة)،
+    // أو بعد وصول رد /check_free_plan فـ الحالة الأخرى (وهي التي تكشف
+    // الزر بنفسها فـ finally أعلاه)
     if (isFreePlanActiveLocally(userId)) {
       setFreeBtnActivated();
+      revealFreeBtn();
+      // ✅ نتحقق فـ الخلفية بصمت للتأكد والمزامنة (بلا أي تأثير مرئي
+      // بما أن الزر مكشوف بالفعل بالحالة الصحيحة)
+      checkOwnFreePlanStatus(userId);
+    } else {
+      // ✅ لا حالة محفوظة محلياً بعد — ننتظر رد /check_free_plan قبل أي
+      // كشف للزر (checkOwnFreePlanStatus تكشفه بنفسها فـ finally)
+      checkOwnFreePlanStatus(userId);
     }
-
-    // ✅ لا داعٍ لانتظار (await) هذا الطلب — لا يجب أن يؤخر بقية التهيئة.
-    // يبقى ضرورياً فـ كل زيارة: أول مرة ليملأ الذاكرة المحلية للمرة
-    // القادمة، وبعدها كتحقق صامت فـ الخلفية (لا يُرى أي تغيير مرئي إذا
-    // كانت الحالة المحلية مطابقة للحقيقة، وهو ما يحدث دائماً بما أن
-    // had_free لا يرجع من true إلى false أبداً)
-    checkOwnFreePlanStatus(userId);
   }
   updateSummary();
 }
