@@ -678,7 +678,7 @@ body::before {
     <div class="plan-free" id="freePlanCard">
       <div class="plan-free-inner">
 
-        <div class="active-free-state hidden" id="activeFreeState">
+        <div class="active-free-state" id="activeFreeState">
           <div class="free-badge"><i class="fa-solid fa-gift"></i> مجاناً لأول 10000 شخص</div>
           <div>
             <div class="free-price" style="margin-top:8px;">
@@ -1088,74 +1088,15 @@ async function loadCurrentUser() {
   } catch { _currentUser = null; }
 }
 
-// ✅ إظهار حالة "الخطة متاحة"
-function showActiveFreeState() {
-  document.getElementById('activeFreeState').classList.remove('hidden');
-}
-
-// ✅ إظهار البطاقة بالكامل — تُستدعى فقط بعد أن تُعبَّأ بالبيانات الصحيحة
-// (سواء "متاح" أو "نفدت الأماكن")، فلا يرى المستخدم البطاقة إلا وهي
-// جاهزة بمحتواها النهائي الصحيح
-function revealFreePlanCard() {
-  const card = document.getElementById('freePlanCard');
-  if (card) card.classList.remove('pending');
-}
-
-// ✅ جلب حالة العرض المجاني من الباك إند (sold_out / user_has_free).
-// الباك إند لا يحسب أي شيء لحظياً هنا — فقط يقرأ علماً دائماً
-// (free_offer_sold_out) يُحدَّثه خيط مراقبة دوري كل ساعة تقريباً من
-// طرف الباك إند وحده (راجع _start_free_offer_monitor فـ M7SQL.py)،
-// فهذا الطلب سريع جداً (قراءة بسيطة، بلا أي COUNT على قاعدة البيانات).
-//
-// إصلاح الوميض (Flash): بطاقة الخطة المجانية تبقى مخفية بالكامل
-// (class="pending" → opacity:0) منذ تحميل الصفحة، ولا تُظهَر أبداً إلا
-// بعد أن نملأها بالبيانات الحقيقية القادمة من هذا الطلب مباشرة — لا
-// حساب عند تحميل الصفحة ثم عرض، بل قراءة نتيجة محسوبة مسبقاً وعرضها
-// فوراً. الطلب يُطلق بأسرع وقت ممكن (أول سطر يُنفَّذ فـ هذا الملف)
-// لتقليل مدة الإخفاء إلى أقل ما يمكن (عادة بضع مئات من المللي ثانية).
-async function loadPricingStatus() {
-  // ✅ مهلة زمنية قصوى: إذا لم يرد الخادم خلال 8 ثوانٍ (خادم بطيء، مشكلة
-  // فـ Cloudflare، اتصال معلّق بصمت...) نُلغي الطلب يدوياً بدل الانتظار
-  // إلى ما لا نهاية — فتُكشف البطاقة بحالة افتراضية آمنة بدل أن تبقى
-  // مخفية للأبد
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
-
-  try {
-    const res = await fetch(`${CONFIG.API}/pricing_status`, {
-      credentials: 'include',
-      signal: controller.signal,
-    });
-    if (!res.ok) { showActiveFreeState(); return; }
-    const data = await res.json();
-    if (data.status !== 'ok') { showActiveFreeState(); return; }
-
-    if (data.sold_out) {
-      activateSoldOutUI();
-    } else {
-      showActiveFreeState();
-    }
-    if (data.user_has_free) {
-      setFreeBtnActivated();
-    }
-  } catch {
-    // فشل الطلب (بلا اتصال، مهلة منتهية، خطأ شبكة...) — نلجأ للحالة
-    // الافتراضية الآمنة (متاح) بدل ترك البطاقة مخفية للأبد
-    showActiveFreeState();
-  } finally {
-    // ✅ finally يُنفَّذ دائماً فـ JavaScript — سواء نجح الطلب، أو دخلنا
-    // أحد شروط "return" أعلاه، أو رمى استثناء ومسكه catch. لذلك
-    // revealFreePlanCard() مضمون الاستدعاء فـ كل السيناريوهات، ولا يمكن
-    // أن تبقى البطاقة مخفية إلى الأبد
-    clearTimeout(timeoutId);
-    revealFreePlanCard();
-  }
-}
-
-
-// ✅ نطلق الطلب فوراً بمجرد تحميل هذا السكربت (أسرع وقت ممكن)، بالتوازي
-// مع بقية عمليات التهيئة، لتقليل مدة إخفاء البطاقة إلى أدنى حد
-loadPricingStatus();
+// ✅ هذه النسخة من الصفحة ثابتة (Hardcoded): تعرض "ابدأ مجاناً" دائماً
+// بشكل افتراضي، بلا أي طلب شبكة أو فحص عند تحميل الصفحة. لا يوجد أي
+// وميض لأنه لا يوجد أي انتظار من الأساس — الحالة معروضة فوراً من أول
+// بايت. الباك إند يبقى خط الدفاع الحقيقي: لو ضغط المستخدم "ابدأ مجاناً"
+// بعد أن يكون العرض قد انتهى فعلياً (ولم تُستبدل هذه الصفحة بعد بالنسخة
+// الأخرى المخصصة لحالة "انتهى العرض")، سيرفض /create_order الطلب برسالة
+// واضحة (راجع activateSoldOutUI و submitFreeOrder تحت) — فلا يمكن أبداً
+// منح خطة مجانية إضافية بعد انتهاء العرض الفعلي، بغض النظر عن الصفحة
+// المعروضة.
 
 function getUserEmail() { return _currentUser ? _currentUser.email : null; }
 function getUserId()    { return _currentUser ? _currentUser.user_id : null; }
