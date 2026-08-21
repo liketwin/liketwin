@@ -783,6 +783,9 @@ audio { display: block; width: 100%; margin-top: 4px; }
   font-weight: 700;
 }
 html.auth-in .mobile-menu-link.dash { display: flex; }
+/* ✅ زر "تواصل معنا" داخل القائمة — نفس أخضر واتساب المستخدم في الفوتر */
+.mobile-menu-link.contact { color: #25d366; }
+.mobile-menu-link.contact:hover { color: #25d366; background: rgba(37,211,102,0.1); }
 
 @media (max-width: 800px) {
   .topbar { padding: 12px 16px; }
@@ -876,10 +879,14 @@ html.auth-in .mobile-menu-link.dash { display: flex; }
     <i class="fa-solid fa-bars" id="navToggleIcon"></i>
   </button>
 
-  <!-- ✅ القائمة المنسدلة لعرض الهاتف — نفس رابطي "الأسعار" و"لوحتي" -->
+  <!-- ✅ القائمة المنسدلة لعرض الهاتف — رابطا "الأسعار" و"لوحتي" الأصليان
+       + زر "تواصل معنا" الجديد أسفل "الأسعار" مباشرة، يفتح واتساب مباشرة -->
   <div class="mobile-menu" id="mobileMenu">
     <a href="/pricing" class="mobile-menu-link">
       <i class="fa-solid fa-tag"></i> الأسعار
+    </a>
+    <a href="https://wa.me/212603074384" target="_blank" rel="noopener noreferrer" class="mobile-menu-link contact">
+      <i class="fa-brands fa-whatsapp"></i> تواصل معنا
     </a>
     <a href="/dashboard" class="mobile-menu-link dash" id="mobileNavDashboard">
       <i class="fa-solid fa-gauge"></i> لوحتي
