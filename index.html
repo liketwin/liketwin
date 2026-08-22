@@ -624,6 +624,79 @@ audio { display: block; width: 100%; margin-top: 4px; }
 .share-reader-sub { font-size: 0.72rem; color: var(--text3); margin-top: 2px; }
 .share-pct { font-size: 1rem; font-weight: 900; color: var(--success); flex-shrink: 0; }
 
+/* ═══ ACCORDION (عرض موحّد للنتائج على الهاتف) ═══
+   ------------------------------------------------------------
+   لا حذف لأي شيء من عمودي سطح المكتب (readersBody / shareBody) —
+   هذه بنية إضافية موازية تُستعمل فقط على شاشات الهاتف (media query
+   أسفل)، تدمج القرّاء + مشغلات الصوت في قائمة واحدة قابلة للطي. */
+.mobile-accordion-wrap { display: none; }
+.accordion-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.accordion-list::-webkit-scrollbar { width: 4px; }
+.accordion-list::-webkit-scrollbar-track { background: transparent; }
+.accordion-list::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 2px; }
+.accordion-list::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+.acc-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+  flex-shrink: 0;
+}
+.acc-card.open { border-color: var(--border-h); }
+.acc-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: 'Tajawal', sans-serif;
+  text-align: right;
+  color: inherit;
+}
+.acc-rank {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(79,142,247,0.12);
+  color: var(--accent2);
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.acc-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+}
+.acc-pct { flex-shrink: 0; font-size: 0.88rem; font-weight: 900; color: var(--success); }
+.acc-chevron { flex-shrink: 0; color: var(--text3); font-size: 0.75rem; transition: transform 0.25s ease, color 0.2s; }
+.acc-card.open .acc-chevron { transform: rotate(180deg); color: var(--accent2); }
+.acc-body { max-height: 0; overflow: hidden; transition: max-height 0.32s ease; }
+.acc-body-inner { padding: 0 16px 16px; }
+
 /* ═══ MODAL ═══ */
 .modal-overlay { position: fixed; inset: 0; background: rgba(5, 8, 18, 0.82); backdrop-filter: blur(10px); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
 .modal-overlay.open { opacity: 1; pointer-events: all; }
@@ -801,6 +874,11 @@ html.auth-in .mobile-menu-link.dash { display: flex; }
   .nav-toggle { display: flex; }
   .mobile-menu { display: flex; }
   .results.on { display: flex; flex-direction: column; }
+  /* ✅ على الهاتف: نخفي عمودي سطح المكتب (القرّاء + الملخص) وندمجهما
+     في القائمة الأكورديون الموحّدة أدناه، دون حذف أي عنصر من DOM
+     ولا أي منطق برمجي — فقط إخفاء بصري عبر media query. */
+  .results .col { display: none; }
+  .mobile-accordion-wrap { display: flex; flex-direction: column; flex: 1; min-height: 0; }
   .col { border-left: none; border-top: 1px solid var(--border); }
   .col-body { max-height: 70vh; min-height: unset; }
   .hero { padding: 30px 16px; }
@@ -1051,6 +1129,27 @@ html.auth-in .mobile-menu-link.dash { display: flex; }
         </div>
       </div>
       <div class="col-body" id="shareBody"></div>
+    </div>
+
+    <!-- ✅ عرض موحّد (Accordion) للهاتف فقط — يدمج القرّاء + مشغلات الصوت
+         في قائمة واحدة قابلة للطي، بلا حذف للعمودين أعلاه (يبقيان
+         مستعملين على سطح المكتب، انظر media query أعلاه). -->
+    <div class="mobile-accordion-wrap" id="mobileAccordionWrap">
+      <div class="col-head">
+        <h2>ترتيب القرّاء الأقرب لصوتك</h2>
+        <span class="col-count" id="accordionCount"></span>
+        <div class="head-share-btns" id="headCopyBtnsMobile">
+          <button class="head-btn copy" onclick="copyResult()">
+            <span><i class="fa-regular fa-copy"></i></span>
+            <span>نسخ النتائج</span>
+          </button>
+          <button class="head-btn share-btn" onclick="openShareModal()">
+            <span><i class="fa-solid fa-share-nodes"></i></span>
+            <span>مشاركة</span>
+          </button>
+        </div>
+      </div>
+      <div class="accordion-list" id="accordionList"></div>
     </div>
   </div>
 
@@ -1599,7 +1698,9 @@ async function checkJobStatus(jobId) {
       document.getElementById('readersBody').innerHTML = readers.map(readerCard).join('');
       document.getElementById('readersCount').textContent = readers.length + ' قارئ';
       document.getElementById('shareBody').innerHTML = buildSharePanel(readers);
-      document.getElementById('headCopyBtns').classList.add('visible');
+      document.getElementById('accordionList').innerHTML = buildAccordionList(readers);
+      document.getElementById('accordionCount').textContent = readers.length + ' قارئ';
+      showHeadShareButtons();
       view('res');
       saveScanState({ v: 'res', ts: Date.now(), readers });
       warmUpResultAudios();
@@ -1789,7 +1890,9 @@ function handleUploadResult(data) {
   document.getElementById('readersBody').innerHTML = readers.map(readerCard).join('');
   document.getElementById('readersCount').textContent = readers.length + ' قارئ';
   document.getElementById('shareBody').innerHTML = buildSharePanel(readers);
-  document.getElementById('headCopyBtns').classList.add('visible');
+  document.getElementById('accordionList').innerHTML = buildAccordionList(readers);
+  document.getElementById('accordionCount').textContent = readers.length + ' قارئ';
+  showHeadShareButtons();
   view('res');
   saveScanState({ v: 'res', ts: Date.now(), readers });
   warmUpResultAudios();
@@ -1908,7 +2011,9 @@ function restoreScanState() {
     document.getElementById('readersBody').innerHTML = st.readers.map(readerCard).join('');
     document.getElementById('readersCount').textContent = st.readers.length + ' قارئ';
     document.getElementById('shareBody').innerHTML = buildSharePanel(st.readers);
-    document.getElementById('headCopyBtns').classList.add('visible');
+    document.getElementById('accordionList').innerHTML = buildAccordionList(st.readers);
+    document.getElementById('accordionCount').textContent = st.readers.length + ' قارئ';
+    showHeadShareButtons();
     view('res');
     warmUpResultAudios();
     return;
@@ -1971,7 +2076,10 @@ function resetToUpload() {
   document.getElementById('readersBody').innerHTML = '';
   document.getElementById('shareBody').innerHTML = '';
   document.getElementById('readersCount').textContent = '';
+  document.getElementById('accordionList').innerHTML = '';
+  document.getElementById('accordionCount').textContent = '';
   document.getElementById('headCopyBtns').classList.remove('visible');
+  document.getElementById('headCopyBtnsMobile').classList.remove('visible');
 
   // إغلاق نافذة المشاركة إن كانت مفتوحة
   closeShareModal();
@@ -2023,19 +2131,31 @@ function buildSharePanel(readers) {
   return `<div class="share-panel">${cards}</div>`;
 }
 
+/* ✅ إظهار أزرار "نسخ النتائج / مشاركة" فـ كلا الرأسين معاً
+   (عمود سطح المكتب + رأس الأكورديون على الهاتف) دفعة واحدة،
+   بدل تكرار نفس السطرين فـ كل مكان تُعرض فيه النتائج */
+function showHeadShareButtons() {
+  document.getElementById('headCopyBtns').classList.add('visible');
+  const mobileBtns = document.getElementById('headCopyBtnsMobile');
+  if (mobileBtns) mobileBtns.classList.add('visible');
+}
+
 /* ══════════════════════════════════════
    نسخ النتائج (هيدر)
+   ✅ يحدّث كل أزرار النسخ الموجودة فـ الصفحة معاً (سطح المكتب +
+   رأس الأكورديون على الهاتف) عبر الكلاس المشترك .head-btn.copy
 ══════════════════════════════════════ */
 function copyResult() {
   const text = buildCopyText(window.lastReaders || []);
   navigator.clipboard.writeText(text).then(() => {
-    const btn = document.getElementById('btnCopyHead');
-    btn.classList.add('copied');
-    btn.innerHTML = '<span>✅</span><span>تم!</span>';
-    setTimeout(() => {
-      btn.classList.remove('copied');
-      btn.innerHTML = '<span><i class="fa-regular fa-copy"></i></span><span>نسخ</span>';
-    }, 2000);
+    document.querySelectorAll('.head-btn.copy').forEach((btn) => {
+      btn.classList.add('copied');
+      btn.innerHTML = '<span>✅</span><span>تم!</span>';
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        btn.innerHTML = '<span><i class="fa-regular fa-copy"></i></span><span>نسخ النتائج</span>';
+      }, 2000);
+    });
   });
 }
 
@@ -2179,11 +2299,17 @@ function warmUpAudioEl(a) {
 
 function warmUpResultAudios() {
   requestAnimationFrame(() => {
-    const audios = document.querySelectorAll('#readersBody audio');
+    // ✅ نشمل مقاطع كلا العرضين (عمود سطح المكتب + قائمة الأكورديون على
+    // الهاتف) لأن كليهما يُملأ بنفس البيانات، لكن الظاهر فعلياً فقط
+    // (عبر CSS media query) هو من يخضع لمنطق IntersectionObserver أدناه
+    const audios = document.querySelectorAll('#readersBody audio, #accordionList audio');
     if (!audios.length) return;
 
-    // تحميل فوري لأول مقطعين فقط (الأعلى تطابقاً) — الأكثر ترجيحاً للاستماع
-    audios.forEach((a, i) => { if (i < 2) warmUpAudioEl(a); });
+    // تحميل فوري لأول مقطعين فقط من كل قائمة (الأعلى تطابقاً) — الأكثر ترجيحاً للاستماع
+    const readersAudios = document.querySelectorAll('#readersBody audio');
+    const accordionAudios = document.querySelectorAll('#accordionList audio');
+    readersAudios.forEach((a, i) => { if (i < 2) warmUpAudioEl(a); });
+    accordionAudios.forEach((a, i) => { if (i < 2) warmUpAudioEl(a); });
 
     // تحميل الباقي فقط عند دخوله فعلياً في نطاق الرؤية
     if (audioWarmObserver) audioWarmObserver.disconnect();
@@ -2203,12 +2329,11 @@ function warmUpResultAudios() {
   });
 }
 
-function readerCard(item) {
-  const name    = esc(item.name);
-  const _pct    = parseFloat(item.percent);
-  const percent = (isNaN(_pct) ? 0 : Math.min(100, Math.max(0, _pct))).toFixed(1);
-  const matches = parseInt(item.matches) || 0;
-  const clips = (item.clips || []).map((c, i) => {
+/* ✅ توليد مقاطع قارئ واحد (الصوت + شريط التقدّم + زر التحميل) —
+   دالة مشتركة يستعملها كل من كارد سطح المكتب (readerCard) وكارد
+   الأكورديون على الهاتف (accordionCard) حتى لا يتكرر نفس المنطق. */
+function buildClipsHtml(item) {
+  return (item.clips || []).map((c, i) => {
     const _cPct   = parseFloat(c.percent);
     const clipPct = (isNaN(_cPct) ? 0 : Math.min(100, Math.max(0, _cPct))).toFixed(1);
     // ✅ رابط التشغيل — يبقى /audio/{id}.wav العادي (بلا Content-
@@ -2237,6 +2362,14 @@ function readerCard(item) {
       <audio preload="none" style="display:none"><source src="${audioSrc.replace(/"/g, '')}" type="audio/wav"></audio>` : ''}
     </div>`;
   }).join('');
+}
+
+function readerCard(item) {
+  const name    = esc(item.name);
+  const _pct    = parseFloat(item.percent);
+  const percent = (isNaN(_pct) ? 0 : Math.min(100, Math.max(0, _pct))).toFixed(1);
+  const matches = parseInt(item.matches) || 0;
+  const clips = buildClipsHtml(item);
   return `
     <div class="card">
       <div class="card-top">
@@ -2248,6 +2381,78 @@ function readerCard(item) {
       <div class="reader-clips">${clips}</div>
     </div>`;
 }
+
+/* ══════════════════════════════════════
+   ✅ قائمة الأكورديون الموحّدة (للهاتف) — تدمج الترتيب والاسم والنسبة
+   فـ رأس قابل للضغط، وتُخفي مشغلات الصوت والعينات داخل جسم قابل
+   للطي/التوسيع (نفس بيانات readerCard تماماً، فقط عرض مختلف).
+══════════════════════════════════════ */
+function buildAccordionList(readers) {
+  return (readers || []).map((item, i) => accordionCard(item, i)).join('');
+}
+
+function accordionCard(item, idx) {
+  const name    = esc(item.name);
+  const _pct    = parseFloat(item.percent);
+  const percent = (isNaN(_pct) ? 0 : Math.min(100, Math.max(0, _pct))).toFixed(1);
+  const matches = parseInt(item.matches) || 0;
+  const clips   = buildClipsHtml(item);
+  return `
+    <div class="acc-card" id="accCard${idx}">
+      <button type="button" class="acc-header" onclick="toggleAccordion(this)" aria-expanded="false">
+        <span class="acc-rank">${idx + 1}</span>
+        <span class="acc-name">${name}</span>
+        <span class="acc-pct">${percent}%</span>
+        <span class="acc-chevron"><i class="fa-solid fa-chevron-down"></i></span>
+      </button>
+      <div class="acc-body">
+        <div class="acc-body-inner">
+          <div class="card-meta">ظهر في ${matches} مقطع</div>
+          <div class="bar"><div class="bar-fill g" style="width:${percent}%"></div></div>
+          <div class="reader-clips">${clips}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ✅ فتح/إغلاق كارد الأكورديون — نمط "كارد واحد مفتوح فـ نفس الوقت"،
+   فعند فتح كارد جديد نُغلق أي كارد آخر مفتوح تلقائياً (ونوقف أي صوت
+   كان يشتغل بداخله)، تماماً كسلوك الأكورديون المعتاد. */
+function toggleAccordion(btn) {
+  const card = btn.closest('.acc-card');
+  if (!card) return;
+  const body = card.querySelector('.acc-body');
+  const isOpen = card.classList.contains('open');
+
+  document.querySelectorAll('.acc-card.open').forEach((other) => {
+    if (other === card) return;
+    other.classList.remove('open');
+    const otherBtn = other.querySelector('.acc-header');
+    if (otherBtn) otherBtn.setAttribute('aria-expanded', 'false');
+    const otherBody = other.querySelector('.acc-body');
+    if (otherBody) otherBody.style.maxHeight = null;
+    other.querySelectorAll('audio').forEach((a) => { if (!a.paused) a.pause(); });
+  });
+
+  if (isOpen) {
+    card.classList.remove('open');
+    btn.setAttribute('aria-expanded', 'false');
+    body.style.maxHeight = null;
+  } else {
+    card.classList.add('open');
+    btn.setAttribute('aria-expanded', 'true');
+    body.style.maxHeight = body.scrollHeight + 'px';
+  }
+}
+
+// ✅ إعادة حساب ارتفاع الكارد المفتوح عند تغيير حجم الشاشة (مثلاً عند
+// تدوير الجهاز)، حتى لا يبقى محتوى مقصوصاً بارتفاع محسوب مسبقاً
+window.addEventListener('resize', function () {
+  document.querySelectorAll('.acc-card.open').forEach((card) => {
+    const body = card.querySelector('.acc-body');
+    if (body) body.style.maxHeight = body.scrollHeight + 'px';
+  });
+});
 
 /* ══════════════════════════════════════
    ✅ مشغّل الصوت المخصّص (بديل عن controls الأصلية من المتصفح)
@@ -2406,6 +2611,14 @@ document.addEventListener('timeupdate', function (e) {
   if (timeEl) {
     timeEl.textContent = formatClipTime(audio.currentTime) +
       (isFinite(audio.duration) ? ' / ' + formatClipTime(audio.duration) : '');
+  }
+
+  // ✅ الكارد المفتوح فـ الأكورديون قد يتغيّر ارتفاعه الداخلي بشكل طفيف
+  // مع تحديث الوقت (نص أطول قليلاً) — نُبقي max-height متزامناً معه
+  const accCard = box.closest('.acc-card.open');
+  if (accCard) {
+    const accBody = accCard.querySelector('.acc-body');
+    if (accBody) accBody.style.maxHeight = accBody.scrollHeight + 'px';
   }
 }, true);
 
