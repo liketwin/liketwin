@@ -630,6 +630,21 @@ audio { display: block; width: 100%; margin-top: 4px; }
    هذه بنية إضافية موازية تُستعمل فقط على شاشات الهاتف (media query
    أسفل)، تدمج القرّاء + مشغلات الصوت في قائمة واحدة قابلة للطي. */
 .mobile-accordion-wrap { display: none; }
+/* ✅ شريط أزرار "نسخ النتائج / مشاركة" — انتقل إلى أسفل قائمة
+   الأكورديون (فوق زر "تحليل جديد" العائم) بدل أعلاها. نستعمل
+   selector أكثر تحديداً (.mobile-accordion-wrap .head-share-btns)
+   حتى لا يتأثر عمود سطح المكتب الذي يستعمل نفس كلاسات
+   .head-share-btns / .head-btn بلا أي تغيير. */
+.mobile-accordion-wrap .head-share-btns {
+  flex-shrink: 0;
+  width: 100%;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 0;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  background: rgba(10,14,26,0.92);
+}
 .accordion-list {
   flex: 1;
   min-height: 0;
@@ -1136,20 +1151,24 @@ html.auth-in .mobile-menu-link.dash { display: flex; }
          مستعملين على سطح المكتب، انظر media query أعلاه). -->
     <div class="mobile-accordion-wrap" id="mobileAccordionWrap">
       <div class="col-head">
-        <h2>ترتيب القرّاء الأقرب لصوتك</h2>
+        <h2>القرّاء الأكثر مطابقة لهوية صوتك الخام</h2>
         <span class="col-count" id="accordionCount"></span>
-        <div class="head-share-btns" id="headCopyBtnsMobile">
-          <button class="head-btn copy" onclick="copyResult()">
-            <span><i class="fa-regular fa-copy"></i></span>
-            <span>نسخ النتائج</span>
-          </button>
-          <button class="head-btn share-btn" onclick="openShareModal()">
-            <span><i class="fa-solid fa-share-nodes"></i></span>
-            <span>مشاركة</span>
-          </button>
-        </div>
       </div>
       <div class="accordion-list" id="accordionList"></div>
+      <!-- ✅ نُقلت أزرار "نسخ النتائج" و"مشاركة" إلى أسفل القائمة —
+           تظهر كشريط ثابت أسفل قائمة القرّاء (فوق زر "تحليل جديد"
+           العائم)، بلا أي تغيير فـ منطقها البرمجي (نفس copyResult()
+           و openShareModal() المستعملتين أصلاً وفـ عمود سطح المكتب). -->
+      <div class="head-share-btns" id="headCopyBtnsMobile">
+        <button class="head-btn copy" onclick="copyResult()">
+          <span><i class="fa-regular fa-copy"></i></span>
+          <span>نسخ النتائج</span>
+        </button>
+        <button class="head-btn share-btn" onclick="openShareModal()">
+          <span><i class="fa-solid fa-share-nodes"></i></span>
+          <span>مشاركة</span>
+        </button>
+      </div>
     </div>
   </div>
 
