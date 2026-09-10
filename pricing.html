@@ -1052,6 +1052,10 @@ const PLAN_DISPLAY = {
   free:     { label: 'المجاني',   price: 0,  comparisons: 5 },
 };
 
+// ✅ الرسالة الخاصة بحد المحاولات (rate limit) — تظهر بلون أخضر بدل الأحمر
+// لأنها ليست خطأ حقيقياً في الطلب، بل تأكيد استلام مع توجيه للتواصل عبر واتساب
+const RATE_LIMIT_MESSAGE = 'وصلنا طلبك! تواصل معنا الآن لتأكيد الدفع وإتمام الطلب';
+
 let selectedPlanKey = 'starter';
 let currentOrderId  = null;
 let payMode = 'paid';
@@ -1399,7 +1403,10 @@ async function submitFreeOrder() {
     scrollToPaySection();
 
   } catch (err) {
-    showToast(err.message, true, 4000);
+    // ✅ رسالة "وصلنا طلبك! تواصل معنا الآن..." (حد المحاولات) ليست خطأ
+    // حقيقياً، بل تأكيد استلام مع توجيه للتواصل — تُعرض بأخضر بدل الأحمر
+    const isRateLimitMsg = err.message === RATE_LIMIT_MESSAGE;
+    showToast(err.message, !isRateLimitMsg, 4000);
     document.getElementById('sectionFreeAuth').classList.add('visible');
     scrollToPaySection();
   } finally {
@@ -1446,7 +1453,9 @@ async function handleSubmit() {
     });
 
   } catch (err) {
-    showToast(err.message, true, 4000);
+    // ✅ نفس المنطق: رسالة حد المحاولات تُعرض بأخضر بدل الأحمر
+    const isRateLimitMsg = err.message === RATE_LIMIT_MESSAGE;
+    showToast(err.message, !isRateLimitMsg, 4000);
   } finally {
     setLoading(false);
   }
