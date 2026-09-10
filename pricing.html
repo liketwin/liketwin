@@ -68,7 +68,14 @@ body::before {
 }
 .logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
 .logo svg { width: 42px; height: 42px; flex-shrink: 0; }
-.logo-name { font-size: 1.1rem; font-weight: 700; color:#1877F2;}
+.logo-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #ffffff, var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
 .nav-links { display: flex; gap: 8px; }
 .nav-link {
   padding: 8px 16px; border: 1px solid var(--border); border-radius: 9px;
@@ -680,7 +687,6 @@ body::before {
     <span class="logo-name">LIKETWIN</span>
   </a>
   <nav class="nav-links">
-    <a href="/dashboard" class="nav-link dash" id="navDashboard"><i class="fa-solid fa-gauge"></i> لوحتي</a>
     <a class="back-btn" href="/"><i class="fa-solid fa-arrow-left"></i> العودة</a>
   </nav>
 </header>
@@ -689,7 +695,7 @@ body::before {
 
   <div class="page-head">
     <h1>اختر خطتك</h1>
-    <p>الاشتراك حسب الاستخدام، وليس حسب الوقت</p>
+    <p>رصيد بلا تاريخ انتهاء، ادفع مقابل ما تستهلكه فقط.</p>
     <div class="user-badge" id="userBadge" style="display:none;">
       <div class="user-badge-dot"></div>
       <div class="user-badge-text">مرحباً، <strong id="badgeEmail">—</strong></div>
@@ -717,11 +723,7 @@ body::before {
           <div class="free-features">
             <div class="free-feat">
               <div class="free-feat-icon">✓</div>
-              <span><strong>مقارنة صوتية 5</strong> مجاناً</span>
-            </div>
-            <div class="free-feat">
-              <div class="free-feat-icon">✓</div>
-              <span>وصول فوري للنتيجة</span>
+              <span><strong>5 مقارنات صوتية</strong> مجاناً</span>
             </div>
             <div class="free-feat">
               <div class="free-feat-icon">✓</div>
