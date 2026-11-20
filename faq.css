@@ -8,13 +8,15 @@
   width: 52px;
   height: 52px;
   padding: 0;
-  border: 1px solid rgba(126, 179, 255, 0.35);
+  border: 1px solid rgba(126, 179, 255, 0.28);
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), #3a7aee);
-  color: #fff;
-  box-shadow: 0 6px 22px rgba(79, 142, 247, 0.4);
+  background: rgba(79, 142, 247, 0.1);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: var(--accent2);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
   cursor: pointer;
-  transition: transform 180ms ease, filter 180ms ease, box-shadow 180ms ease;
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -22,7 +24,13 @@
 
 .lt-faq-help-icon { width: 25px; height: 25px; display: block; }
 
-.lt-faq-button:hover { transform: translateY(-2px); filter: brightness(1.08); box-shadow: 0 10px 30px rgba(79, 142, 247, 0.55); }
+.lt-faq-button:hover {
+  transform: translateY(-2px);
+  background: rgba(79, 142, 247, 0.2);
+  border-color: rgba(126, 179, 255, 0.55);
+  color: #fff;
+  box-shadow: 0 8px 26px rgba(79, 142, 247, 0.3);
+}
 
 .lt-faq-button:active { transform: translateY(0) scale(0.96); }
 
