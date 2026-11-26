@@ -107,7 +107,7 @@
             const canPay = order.state === "waiting" && !signing && !broadcastPending && typeof url === "string" &&
                 url.startsWith("solana:") && Date.parse(order.expires_at) > Date.now();
             choices.hidden = !canPay;
-            walletButton.hidden = !canPay || !(phantom() || injectedPhantom());
+            walletButton.hidden = mobile || !canPay || !(phantom() || injectedPhantom());
             app.hidden = !mobile;
             if (canPay && mobile) app.href = url;
             else app.removeAttribute("href");
@@ -286,6 +286,16 @@
         });
         start.addEventListener("click", () => void changeOrder("/orders", {plan_id:getPlan(), asset:select.value, invoice_version:3}));
         recheck.addEventListener("click", () => void checkAssets());
+        app.addEventListener("click", event => {
+            if (!order || signing || broadcastPending || Date.parse(order.expires_at) <= Date.now()) {
+                event.preventDefault();
+                return;
+            }
+            if (phantom() || injectedPhantom()) {
+                event.preventDefault();
+                void signWithPhantom();
+            }
+        });
         walletButton.addEventListener("click", () => void signWithPhantom());
         el("directReset").addEventListener("click", () => {
             resetInvoice();
@@ -297,6 +307,10 @@
         });
         window.addEventListener(walletEvent, render);
         window.addEventListener("load", render, {once:true});
+        window.addEventListener("focus", render);
+        document.addEventListener("visibilitychange", () => {
+            if (!document.hidden) render();
+        });
         const summary = el("summaryPlan");
         if (summary) new MutationObserver(() => {
             if (plan === getPlan() || signing || busy) return;

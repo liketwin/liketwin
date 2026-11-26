@@ -429,8 +429,9 @@ body::before {
 .crypto-invoice-amount { margin:8px 0; }
 #directOrderAmount { color:#fff; font-size:1.22rem; overflow-wrap:anywhere; }
 #directExpires { color:#d7c9fb; font-size:.75rem; }
-#directPhoneCanvas { display:block; max-width:100%; height:auto; background:white; margin:auto; }
-.payment-crypto .crypto-pay-action { display:block; width:100%; text-align:center; box-sizing:border-box; padding:10px; border:1px solid #8979c7; border-radius:8px; margin:6px 0 0; color:#fff; background:#322851; font:inherit; text-decoration:none; cursor:pointer; }
+#directPhoneCanvas { display:block; max-width:100%; height:auto; background:white; margin:12px auto 0; }
+.payment-crypto .crypto-pay-action { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; text-align:center; box-sizing:border-box; padding:10px; border:1px solid #8979c7; border-radius:8px; margin:6px 0 0; color:#fff; background:#322851; font:inherit; text-decoration:none; cursor:pointer; }
+.crypto-pay-action img { flex:none; border-radius:5px; }
 .crypto-qr-caption { text-align:center; margin:8px 0; }
 .payment-crypto .crypto-text-button,.crypto-invoice a { display:inline-block; width:auto; margin:4px 0 0 10px; padding:4px 0; background:none; border:0; color:#e7dbff; font:inherit; font-size:.78rem; text-decoration:underline; cursor:pointer; }
 .crypto-history { margin-top:10px; color:#eee9ff; font-size:.84rem; }
@@ -959,10 +960,16 @@ body::before {
             <span id="directExpires"></span>
           </div>
           <div id="directPhantomPay" hidden>
+            <a id="directPhantomLink" class="crypto-pay-action" hidden>
+              <img src="phantom-wallet.svg" width="24" height="24" alt="">
+              <span>افتح محفظتك <bdi>Phantom</bdi></span>
+            </a>
+            <button id="directPhantomSign" class="crypto-pay-action" type="button" hidden>
+              <img src="phantom-wallet.svg" width="24" height="24" alt="">
+              <span>اربط إضافة <bdi>Phantom</bdi> وادفع</span>
+            </button>
             <canvas id="directPhoneCanvas" aria-label="رمز فاتورة Solana Pay" hidden></canvas>
             <p class="crypto-qr-caption">امسح الرمز من Phantom على هاتفك.</p>
-            <a id="directPhantomLink" class="crypto-pay-action" hidden>فتح رابط Solana Pay</a>
-            <button id="directPhantomSign" class="crypto-pay-action" type="button" hidden>ادفع بإضافة Phantom</button>
           </div>
           <a id="directTxLink" target="_blank" rel="noopener noreferrer" hidden>عرض المعاملة على الشبكة</a>
           <button id="directReset" class="crypto-text-button" type="button">العودة إلى اختيار العملة</button>
@@ -1141,7 +1148,7 @@ body::before {
 </footer>
 
 <script src="config.js"></script>
-<script src="phantom-solana-pay.js?v=1"></script>
+<script src="phantom-solana-pay.js?v=2"></script>
 <script src="pricing-2.js?v=direct-wallet-2"></script>
 
 <script src="pricing-events.js"></script>
