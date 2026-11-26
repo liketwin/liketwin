@@ -1,0 +1,24 @@
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: microphone=(self), camera=(), geolocation=()
+  Strict-Transport-Security: max-age=31536000
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-n8SeBQJ44hfg74TlDOKj4U2ORkgMfIj5ms8CC25yEBk=' https://*.paypal.com https://*.paypalobjects.com https://telegram.org https://oauth.telegram.org https://www.googletagmanager.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' https://*.paypalobjects.com data: blob: https://www.google-analytics.com https://www.googletagmanager.com; connect-src 'self' https://*.paypal.com https://*.paypalobjects.com https://api.liketwin.com https://telegram.org https://oauth.telegram.org https://www.google-analytics.com https://region1.google-analytics.com https://www.googletagmanager.com; media-src 'self' blob: https://api.liketwin.com; frame-src https://*.paypal.com https://*.paypalobjects.com https://oauth.telegram.org https://telegram.org; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+
+/admin
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+/admin.html
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+/live-stats
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+/live-stats.html
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+/sw.js
+  Cache-Control: no-cache
+/config.js
+  Cache-Control: no-cache
