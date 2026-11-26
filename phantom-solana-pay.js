@@ -238,9 +238,14 @@
             const injected = injectedPhantom();
             if (!standard && !injected) return;
             signing = true;
-            message.textContent = "راجع المبلغ في Phantom ثم وافق على الدفع.";
+            let stage = "connect";
+            message.textContent = "جارٍ ربط Phantom…";
             render();
-            const prepare = publicKey => request("/orders/" + id + "/transaction", {address:publicKey});
+            const prepare = publicKey => {
+                stage = "prepare";
+                message.textContent = "جارٍ تجهيز معاملة Solana…";
+                return request("/orders/" + id + "/transaction", {address:publicKey});
+            };
             const bytes = encoded => Uint8Array.from(atob(encoded), char => char.charCodeAt(0));
             try {
                 let signed;
@@ -249,6 +254,8 @@
                     const account = accounts.find(item => item.chains.includes(chain) && item.features?.includes(signFeature));
                     if (!account) throw new Error("اختر حساب Solana في Phantom.");
                     const {transaction} = await prepare(account.address);
+                    stage = "sign";
+                    message.textContent = "راجع المبلغ في Phantom ثم وافق على الدفع.";
                     [{signedTransaction:signed}] = await standard.features[signFeature].signTransaction({
                         account, chain, transaction:bytes(transaction),
                     });
@@ -257,9 +264,12 @@
                     if (!publicKey) throw new Error("اختر حساب Solana في Phantom.");
                     const {transaction} = await prepare(publicKey.toString());
                     const {signLegacy} = await import("./invoice-solana-legacy.js");
+                    stage = "sign";
+                    message.textContent = "راجع المبلغ في Phantom ثم وافق على الدفع.";
                     signed = await signLegacy(injected, bytes(transaction));
                 }
                 // The server binds the signed transaction to the current invoice before broadcasting.
+                stage = "broadcast";
                 const result = await request("/orders/" + id + "/broadcast", {transaction:btoa(String.fromCharCode(...signed))});
                 broadcastPending = true;
                 const current = revision;
@@ -271,7 +281,13 @@
                 }, 120000);
                 message.textContent = result.submitted ? "أُرسلت الدفعة. جارٍ التحقق." : "جارٍ التحقق من إرسال الدفعة. عُد إلى الفاتورة إذا لزم الأمر.";
             } catch (error) {
-                message.textContent = error.code === 4001 ? "ألغيت الدفع في Phantom." : error.message || "تعذّر تأكيد الدفع.";
+                const description = {
+                    connect: "تعذّر ربط Phantom",
+                    prepare: "تعذّر تجهيز المعاملة",
+                    sign: "تعذّر الحصول على توقيع Phantom",
+                    broadcast: "تعذّر التحقق من إرسال المعاملة",
+                }[stage];
+                message.textContent = description + (error?.message ? " — " + error.message : ".");
             } finally {
                 signing = false;
                 if (order?.state === "completed") message.textContent = "";
