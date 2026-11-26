@@ -1,7 +1,7 @@
-واجهة LIKETWIN — نسخة كاملة للنشر
+واجهة LIKETWIN كاملة للنشر على Cloudflare Pages
 
-انشر محتويات هذا المجلد في جذر مشروع Cloudflare Pages. هذه النسخة تعرض دفع الكريبتو عبر Phantom على Solana، بالعملات SOL وUSDC وUSDT. الملفات التي يحتاجها هذا الخيار هي phantom-solana-pay.js وinvoice-qr.js وinvoice-solana-legacy.js.
+انشر محتويات الحزمة في جذر مشروع Cloudflare Pages. تتوافق الواجهة مع خادم LIKETWIN الذي يعرض checkout_revision بقيمة phantom-solana-v1، بما فيه تحديث LikeTwin-Backend-Phantom-Signed-Match.zip.
 
-ثبّت أولًا حزمة LikeTwin-Backend-Phantom-Solana-Pay.zip على Hostinger وتحقق من أن checkout_revision هو phantom-solana-v1. يعتمد إظهار USDC وUSDT على جاهزية حساب الاستلام على Solana لكل عملة.
+على الحاسوب، تعرض إضافة Phantom المعاملة للمراجعة وترسلها إلى Solana بعد الموافقة. تتحقق LIKETWIN من الدفعة على الشبكة قبل تفعيل الخطة. عند غياب الإضافة، يعرض الموقع رمز QR. ويعمل رابط Solana Pay على الهاتف كما في الإصدار السابق.
 
-تشغّل صفحتا الأسعار الواجهة المبسطة، وتبقى بقية صفحات الموقع وملفاتها ضمن الحزمة. يتضمن ملف wallet-licenses.txt إشعارات حزم QR وتوقيع Phantom.
+يعتمد إظهار USDC وUSDT على جاهزية حساب الاستلام على Solana لكل عملة.

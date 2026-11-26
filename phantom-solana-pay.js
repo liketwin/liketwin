@@ -1,6 +1,6 @@
 (() => {
     const chain = "solana:mainnet";
-    const signFeature = "solana:signTransaction";
+    const sendFeature = "solana:signAndSendTransaction";
     const wallets = new Set();
     const mobile = /Android|iPad|iPhone|iPod/i.test(navigator.userAgent) ||
         (/Mac/i.test(navigator.platform) && navigator.maxTouchPoints > 1);
@@ -28,12 +28,14 @@
 
     function phantom() {
         return [...wallets].find(wallet => /^phantom$/i.test(wallet.name) && wallet.chains?.includes(chain) &&
-            wallet.features?.["standard:connect"] && wallet.features?.[signFeature]);
+            wallet.features?.["standard:connect"] &&
+            typeof wallet.features?.[sendFeature]?.signAndSendTransaction === "function" &&
+            wallet.features[sendFeature].supportedTransactionVersions?.includes("legacy"));
     }
 
     function injectedPhantom() {
         const provider = window.phantom?.solana || (window.solana?.isPhantom ? window.solana : null);
-        return typeof provider?.connect === "function" && typeof provider.signTransaction === "function" ? provider : null;
+        return typeof provider?.connect === "function" && typeof provider.signAndSendTransaction === "function" ? provider : null;
     }
 
     window.setupDirectCheckout = async ({userId, getPlan, onComplete}) => {
@@ -232,7 +234,8 @@
         }
 
         async function signWithPhantom() {
-            if (signing || broadcastPending || !order?.solana_pay_url || Date.parse(order.expires_at) <= Date.now()) return;
+            if (signing || broadcastPending || order?.state !== "waiting" ||
+                !order.solana_pay_url || Date.parse(order.expires_at) <= Date.now()) return;
             const id = order.id;
             const standard = phantom();
             const injected = injectedPhantom();
@@ -241,37 +244,9 @@
             let stage = "connect";
             message.textContent = "جارٍ ربط Phantom…";
             render();
-            const prepare = publicKey => {
-                stage = "prepare";
-                message.textContent = "جارٍ تجهيز معاملة Solana…";
-                return request("/orders/" + id + "/transaction", {address:publicKey});
-            };
-            const bytes = encoded => Uint8Array.from(atob(encoded), char => char.charCodeAt(0));
-            try {
-                let signed;
-                if (standard) {
-                    const {accounts} = await standard.features["standard:connect"].connect();
-                    const account = accounts.find(item => item.chains.includes(chain) && item.features?.includes(signFeature));
-                    if (!account) throw new Error("اختر حساب Solana في Phantom.");
-                    const {transaction} = await prepare(account.address);
-                    stage = "sign";
-                    message.textContent = "راجع المبلغ في Phantom ثم وافق على الدفع.";
-                    [{signedTransaction:signed}] = await standard.features[signFeature].signTransaction({
-                        account, chain, transaction:bytes(transaction),
-                    });
-                } else {
-                    const {publicKey} = await injected.connect();
-                    if (!publicKey) throw new Error("اختر حساب Solana في Phantom.");
-                    const {transaction} = await prepare(publicKey.toString());
-                    const {signLegacy} = await import("./invoice-solana-legacy.js");
-                    stage = "sign";
-                    message.textContent = "راجع المبلغ في Phantom ثم وافق على الدفع.";
-                    signed = await signLegacy(injected, bytes(transaction));
-                }
-                // The server binds the signed transaction to the current invoice before broadcasting.
-                stage = "broadcast";
-                const result = await request("/orders/" + id + "/broadcast", {transaction:btoa(String.fromCharCode(...signed))});
+            function waitForConfirmation(status) {
                 broadcastPending = true;
+                message.textContent = status;
                 const current = revision;
                 setTimeout(() => {
                     if (current !== revision || order?.state !== "waiting") return;
@@ -279,15 +254,53 @@
                     message.textContent = "إن سبق أن وافقت على التحويل، راجع حالته في Phantom قبل الدفع مرة أخرى.";
                     render();
                 }, 120000);
-                message.textContent = result.submitted ? "أُرسلت الدفعة. جارٍ التحقق." : "جارٍ التحقق من إرسال الدفعة. عُد إلى الفاتورة إذا لزم الأمر.";
+            }
+            try {
+                const {encodeSignature, sendLegacy} = await import("./invoice-solana-send.js");
+                let account;
+                let address;
+                if (standard) {
+                    const {accounts} = await standard.features["standard:connect"].connect();
+                    account = accounts.find(item => item.chains.includes(chain) && item.features?.includes(sendFeature));
+                    address = account?.address;
+                } else {
+                    const {publicKey} = await injected.connect();
+                    address = publicKey?.toString();
+                }
+                if (!address) throw new Error("اختر حساب Solana في Phantom.");
+                if (order?.id !== id || order.state !== "waiting" || Date.parse(order.expires_at) <= Date.now()) return;
+
+                stage = "prepare";
+                message.textContent = "جارٍ تجهيز معاملة Solana…";
+                const {transaction} = await request("/orders/" + id + "/transaction", {address});
+                const bytes = Uint8Array.from(atob(transaction), char => char.charCodeAt(0));
+                if (order?.id !== id || order.state !== "waiting" || Date.parse(order.expires_at) <= Date.now()) return;
+
+                stage = "send";
+                message.textContent = "راجع المبلغ في Phantom ثم وافق على الدفع.";
+                let signature;
+                if (standard) {
+                    const [result] = await standard.features[sendFeature].signAndSendTransaction({
+                        account, chain, transaction:bytes, options:{skipPreflight:false},
+                    });
+                    signature = encodeSignature(result?.signature);
+                } else {
+                    signature = await sendLegacy(injected, bytes);
+                }
+                if (typeof signature !== "string" || !/^[1-9A-HJ-NP-Za-km-z]{64,88}$/.test(signature)) {
+                    throw new Error("Phantom did not return a transaction signature");
+                }
+                waitForConfirmation("أرسلت Phantom الدفعة. جارٍ انتظار التأكيد على Solana…");
+                void request("/orders/" + id + "/verify", {signature}).catch(() => {});
             } catch (error) {
-                const description = {
-                    connect: "تعذّر ربط Phantom",
-                    prepare: "تعذّر تجهيز المعاملة",
-                    sign: "تعذّر الحصول على توقيع Phantom",
-                    broadcast: "تعذّر التحقق من إرسال المعاملة",
-                }[stage];
-                message.textContent = description + (error?.message ? " — " + error.message : ".");
+                if (error?.code === 4001) {
+                    message.textContent = "أُلغيت العملية في Phantom.";
+                } else if (stage === "send") {
+                    waitForConfirmation("تعذّر معرفة حالة الإرسال. راجع سجل Phantom قبل إعادة الدفع.");
+                } else {
+                    const description = stage === "prepare" ? "تعذّر تجهيز المعاملة" : "تعذّر ربط Phantom";
+                    message.textContent = description + (error?.message ? " — " + error.message : ".");
+                }
             } finally {
                 signing = false;
                 if (order?.state === "completed") message.textContent = "";

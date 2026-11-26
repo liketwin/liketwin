@@ -1,4 +1,4 @@
-Third-party notices for invoice-qr.js and invoice-solana-legacy.js
+Third-party notices for invoice-qr.js and invoice-solana-send.js
 
 qrcode-generator 1.5.2 — MIT
 
