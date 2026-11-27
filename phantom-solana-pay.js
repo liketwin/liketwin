@@ -1,4 +1,12 @@
 (() => {
+    function publicSolanaPayUrl(url) {
+        const prefix = "solana:https://api.liketwin.com/api/payments/direct/solana-pay/";
+        if (typeof url !== "string" || !url.startsWith(prefix)) return null;
+        const reference = url.slice(prefix.length);
+        if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(reference)) return null;
+        return "solana:https://liketwin.com/solana-pay/" + reference;
+    }
+
     const solanaSignature = /^[1-9A-HJ-NP-Za-km-z]{64,88}$/;
     const mobile = /Android|iPad|iPhone|iPod/i.test(navigator.userAgent) ||
         (/Mac/i.test(navigator.platform) && navigator.maxTouchPoints > 1);
@@ -108,7 +116,7 @@
             tx.hidden = !signature || !explorers[order.network];
             if (!tx.hidden) tx.href = explorers[order.network] + encodeURIComponent(signature);
 
-            const url = order.solana_pay_url;
+            const url = publicSolanaPayUrl(order.solana_pay_url);
             const canPay = order.state === "waiting" && !attempt && typeof url === "string" &&
                 url.startsWith("solana:") && Date.parse(order.expires_at) > Date.now();
             choices.hidden = !canPay;
@@ -119,7 +127,7 @@
                 qrUrl = url;
                 qr.hidden = true;
                 void import("./invoice-qr.js").then(({drawQr}) => {
-                    if (qrUrl !== url || order?.solana_pay_url !== url) return;
+                    if (qrUrl !== url || publicSolanaPayUrl(order?.solana_pay_url) !== url) return;
                     drawQr(qr, url);
                     qr.hidden = false;
                 }).catch(() => {
@@ -231,7 +239,7 @@
                     rememberAttempt(value.id, signature);
                     void verifyAttempt(value.id);
                 } else {
-                    message.textContent = value.state === "waiting" && !value.solana_pay_url
+                    message.textContent = value.state === "waiting" && !publicSolanaPayUrl(value.solana_pay_url)
                         ? "تتابع هذه الصفحة حالة دفعتك السابقة." : "";
                 }
                 if (data) void refreshHistory();
