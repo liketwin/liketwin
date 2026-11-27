@@ -1,6 +1,28 @@
 const referencePattern = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const walletBodyLimit = 256;
 const upstreamRoute = "https://api.liketwin.com/api/payments/direct/solana-pay/";
+const testReference = "11111111111111111111111111111112";
+
+async function diagnoseUpstream(url, options) {
+    const report = {probe: "solana-pay-upstream-v1"};
+    try {
+        const response = await fetch(url, options);
+        report.stage = "upstream-response";
+        report.upstream_status = response.status;
+        report.upstream_type = response.headers.get("Content-Type")?.split(";")[0] ?? null;
+        if (report.upstream_type?.toLowerCase() === "application/json") {
+            const body = await response.json().catch(() => null);
+            report.expected_invoice_not_found = response.status === 404 && body?.detail === "الفاتورة غير موجودة.";
+        } else {
+            await response.body?.cancel();
+        }
+    } catch (error) {
+        report.stage = "fetch-failed";
+        report.error_type = error?.name ?? "Error";
+        console.warn("Solana Pay upstream fetch failed", error?.message);
+    }
+    return Response.json(report, {headers: {"Cache-Control": "no-store"}});
+}
 
 function reject(status, detail, extraHeaders = {}) {
     return Response.json({detail}, {
@@ -48,6 +70,10 @@ export async function onRequest({request, params}) {
 
     const headers = new Headers({"Accept": "application/json"});
     const options = {method, headers, redirect: "error", signal: AbortSignal.timeout(25000)};
+    if (method === "GET" && reference === testReference &&
+        new URL(request.url).searchParams.get("diagnostic") === "1") {
+        return diagnoseUpstream(upstreamRoute + reference, options);
+    }
     if (method === "POST") {
         if (request.headers.get("Content-Type")?.split(";")[0].trim().toLowerCase() !== "application/json") {
             return reject(415, "Expected an application/json request.");
