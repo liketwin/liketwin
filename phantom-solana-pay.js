@@ -1,8 +1,5 @@
 (() => {
-    const chain = "solana:mainnet";
-    const sendFeature = "solana:signAndSendTransaction";
     const solanaSignature = /^[1-9A-HJ-NP-Za-km-z]{64,88}$/;
-    const wallets = new Set();
     const mobile = /Android|iPad|iPhone|iPod/i.test(navigator.userAgent) ||
         (/Mac/i.test(navigator.platform) && navigator.maxTouchPoints > 1);
     const statuses = {waiting:"بانتظار الدفع", completed:"تم تأكيد الدفع وتفعيل الخطة", expired:"انتهت صلاحية الفاتورة"};
@@ -11,34 +8,6 @@
         opbnb:"https://opbnb.bscscan.com/tx/", polygon:"https://polygonscan.com/tx/",
         tron:"https://tronscan.org/#/transaction/", litecoin:"https://litecoinspace.org/tx/",
     };
-    const walletEvent = "liketwin-phantom-ready";
-    const registry = {
-        register(...entries) {
-            for (const entry of entries) wallets.add(entry);
-            window.dispatchEvent(new Event(walletEvent));
-            return () => {
-                for (const entry of entries) wallets.delete(entry);
-                window.dispatchEvent(new Event(walletEvent));
-            };
-        },
-    };
-    window.addEventListener("wallet-standard:register-wallet", ({detail}) => {
-        if (typeof detail === "function") detail(registry);
-    });
-    window.dispatchEvent(new CustomEvent("wallet-standard:app-ready", {detail:registry}));
-
-    function phantom() {
-        return [...wallets].find(wallet => /^phantom$/i.test(wallet.name) && wallet.chains?.includes(chain) &&
-            wallet.features?.["standard:connect"] &&
-            typeof wallet.features?.[sendFeature]?.signAndSendTransaction === "function" &&
-            wallet.features[sendFeature].supportedTransactionVersions?.includes("legacy"));
-    }
-
-    function injectedPhantom() {
-        const provider = window.phantom?.solana || (window.solana?.isPhantom ? window.solana : null);
-        return typeof provider?.connect === "function" && typeof provider.signAndSendTransaction === "function" ? provider : null;
-    }
-
     window.setupDirectCheckout = async ({userId, getPlan, onComplete}) => {
         const el = id => document.getElementById(id);
         const section = el("solanaCheckout");
@@ -49,15 +18,12 @@
         const invoice = el("directInvoice");
         const qr = el("directPhoneCanvas");
         const choices = el("directPhantomPay");
-        const walletButton = el("directPhantomSign");
         const app = el("directPhantomLink");
         const history = el("directPrevious");
         const message = el("solanaStatus");
         let configured = {};
         let order = null;
         let busy = false;
-        let signing = false;
-        let broadcastPending = false;
         let attempt = null;
         let qrUrl = "";
         let timer;
@@ -117,11 +83,10 @@
 
         function render() {
             invoice.hidden = !order;
-            select.disabled = busy || signing;
-            start.disabled = busy || signing || !select.value;
-            recheck.disabled = busy || signing;
-            history.disabled = busy || signing;
-            el("directReset").disabled = signing;
+            select.disabled = busy;
+            start.disabled = busy || !select.value;
+            recheck.disabled = busy;
+            history.disabled = busy;
             if (!order) {
                 choices.hidden = true;
                 app.removeAttribute("href");
@@ -131,7 +96,7 @@
             el("directOrderNumber").textContent = order.id.slice(0, 12).toUpperCase();
             el("directOrderAmount").textContent = order.amount + " " + order.label.split(" — ")[0];
             const state = el("directInvoiceState");
-            state.textContent = order.state === "waiting" && (broadcastPending || attempt) ? "بانتظار تأكيد الدفع" : statuses[order.state];
+            state.textContent = order.state === "waiting" && attempt ? "بانتظار تأكيد الدفع" : statuses[order.state];
             state.dataset.state = order.state;
             const expires = el("directExpires");
             expires.hidden = order.state !== "waiting";
@@ -144,10 +109,9 @@
             if (!tx.hidden) tx.href = explorers[order.network] + encodeURIComponent(signature);
 
             const url = order.solana_pay_url;
-            const canPay = order.state === "waiting" && !signing && !broadcastPending && !attempt && typeof url === "string" &&
+            const canPay = order.state === "waiting" && !attempt && typeof url === "string" &&
                 url.startsWith("solana:") && Date.parse(order.expires_at) > Date.now();
             choices.hidden = !canPay;
-            walletButton.hidden = mobile || !canPay || !(phantom() || injectedPhantom());
             app.hidden = !mobile;
             if (canPay && mobile) app.href = url;
             else app.removeAttribute("href");
@@ -180,7 +144,7 @@
         }
 
         async function checkAssets() {
-            if (busy || signing) return;
+            if (busy) return;
             busy = true;
             render();
             try {
@@ -210,7 +174,6 @@
             revision++;
             order = null;
             qrUrl = "";
-            broadcastPending = false;
             attempt = null;
             const url = new URL(location.href);
             url.searchParams.delete("direct_order");
@@ -242,7 +205,6 @@
 
         function showOrder(value) {
             order = value;
-            broadcastPending = false;
             qrUrl = "";
             const url = new URL(location.href);
             url.searchParams.set("direct_order", value.id);
@@ -253,7 +215,7 @@
         }
 
         async function changeOrder(path, data) {
-            if (busy || signing || (data && !select.value)) return;
+            if (busy || (data && !select.value)) return;
             resetInvoice();
             busy = true;
             message.textContent = "جارٍ تجهيز الفاتورة…";
@@ -282,95 +244,6 @@
             }
         }
 
-        async function signWithPhantom() {
-            if (signing || broadcastPending || attempt || order?.state !== "waiting" ||
-                !order.solana_pay_url || Date.parse(order.expires_at) <= Date.now()) return;
-            const id = order.id;
-            const injected = injectedPhantom();
-            const standard = injected ? null : phantom();
-            if (!standard && !injected) return;
-            signing = true;
-            let stage = "connect";
-            message.textContent = "جارٍ ربط Phantom…";
-            render();
-            function waitForConfirmation(status) {
-                broadcastPending = true;
-                message.textContent = status;
-                const current = revision;
-                setTimeout(() => {
-                    if (current !== revision || order?.state !== "waiting") return;
-                    broadcastPending = false;
-                    message.textContent = "إن سبق أن وافقت على التحويل، راجع حالته في Phantom قبل الدفع مرة أخرى.";
-                    render();
-                }, 120000);
-            }
-            let connectionTimer;
-            try {
-                // Ask Phantom to connect while the click is still active.
-                const connection = standard ? standard.features["standard:connect"].connect() : injected.connect();
-                const connected = await Promise.race([connection, new Promise((_, reject) => {
-                    connectionTimer = setTimeout(() => {
-                        reject(new Error("لم تردّ الإضافة. افتح Phantom من شريط المتصفح وافتح قفلها. أغلق أي نافذة طلب قديمة ثم حاول مجددًا."));
-                    }, 45000);
-                })]);
-                clearTimeout(connectionTimer);
-                let account;
-                let address;
-                if (standard) {
-                    account = connected.accounts.find(item => item.chains.includes(chain) && item.features?.includes(sendFeature));
-                    address = account?.address;
-                } else {
-                    address = connected.publicKey?.toString();
-                }
-                if (!address) throw new Error("اختر حساب Solana في Phantom.");
-                stage = "load";
-                message.textContent = "جارٍ تحميل مكوّن الدفع…";
-                const {encodeSignature, sendLegacy} = await import("./invoice-solana-send.js");
-                if (order?.id !== id || order.state !== "waiting" || Date.parse(order.expires_at) <= Date.now()) return;
-
-                stage = "prepare";
-                message.textContent = "جارٍ تجهيز معاملة Solana…";
-                const {transaction} = await request("/orders/" + id + "/transaction", {address});
-                const bytes = Uint8Array.from(atob(transaction), char => char.charCodeAt(0));
-                if (order?.id !== id || order.state !== "waiting" || Date.parse(order.expires_at) <= Date.now()) return;
-
-                stage = "send";
-                message.textContent = "راجع المبلغ في Phantom ثم وافق على الدفع.";
-                let signature;
-                if (standard) {
-                    const [result] = await standard.features[sendFeature].signAndSendTransaction({
-                        account, chain, transaction:bytes, options:{skipPreflight:false},
-                    });
-                    signature = encodeSignature(result?.signature);
-                } else {
-                    signature = await sendLegacy(injected, bytes);
-                }
-                if (typeof signature !== "string" || !solanaSignature.test(signature)) {
-                    throw new Error("Phantom did not return a transaction signature");
-                }
-                rememberAttempt(id, signature);
-                void verifyAttempt(id);
-            } catch (error) {
-                if (error?.code === 4001) {
-                    message.textContent = "أُلغيت العملية في Phantom.";
-                } else if (stage === "connect" && error?.code === -32002) {
-                    message.textContent = "هناك طلب مفتوح في Phantom. أغلق نافذته ثم حاول مجددًا.";
-                } else if (stage === "send") {
-                    waitForConfirmation("تعذّر معرفة حالة الإرسال. راجع سجل Phantom قبل إعادة الدفع.");
-                } else if (stage === "load") {
-                    message.textContent = "تعذّر تحميل مكوّن الدفع. حدّث الصفحة ثم حاول مجددًا.";
-                } else {
-                    const description = stage === "prepare" ? "تعذّر تجهيز المعاملة" : "تعذّر ربط Phantom";
-                    message.textContent = description + (error?.message ? " — " + error.message : ".");
-                }
-            } finally {
-                clearTimeout(connectionTimer);
-                signing = false;
-                if (order?.state === "completed") message.textContent = "";
-                render();
-            }
-        }
-
         select.addEventListener("change", () => {
             if (order) resetInvoice();
             message.textContent = "";
@@ -379,16 +252,11 @@
         start.addEventListener("click", () => void changeOrder("/orders", {plan_id:getPlan(), asset:select.value, invoice_version:3}));
         recheck.addEventListener("click", () => void checkAssets());
         app.addEventListener("click", event => {
-            if (!order || signing || broadcastPending || attempt || Date.parse(order.expires_at) <= Date.now()) {
+            if (!app.hasAttribute("href") || order?.state !== "waiting" || attempt ||
+                Date.parse(order.expires_at) <= Date.now()) {
                 event.preventDefault();
-                return;
-            }
-            if (phantom() || injectedPhantom()) {
-                event.preventDefault();
-                void signWithPhantom();
             }
         });
-        walletButton.addEventListener("click", () => void signWithPhantom());
         el("directReset").addEventListener("click", () => {
             resetInvoice();
             message.textContent = "";
@@ -397,7 +265,6 @@
         history.addEventListener("change", () => {
             if (/^[0-9a-f]{32}$/.test(history.value)) void changeOrder("/orders/" + history.value);
         });
-        window.addEventListener(walletEvent, render);
         window.addEventListener("load", render, {once:true});
         window.addEventListener("focus", render);
         document.addEventListener("visibilitychange", () => {
@@ -405,7 +272,7 @@
         });
         const summary = el("summaryPlan");
         if (summary) new MutationObserver(() => {
-            if (plan === getPlan() || signing || busy) return;
+            if (plan === getPlan() || busy) return;
             plan = getPlan();
             resetInvoice();
             message.textContent = "";
