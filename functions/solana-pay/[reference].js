@@ -4,7 +4,7 @@ const upstreamRoute = "https://api.liketwin.com/api/payments/direct/solana-pay/"
 const testReference = "11111111111111111111111111111112";
 
 async function diagnoseUpstream(url, options) {
-    const report = {probe: "solana-pay-upstream-v1"};
+    const report = {probe: "solana-pay-upstream-v2"};
     try {
         const response = await fetch(url, options);
         report.stage = "upstream-response";
@@ -69,7 +69,7 @@ export async function onRequest({request, params}) {
     }
 
     const headers = new Headers({"Accept": "application/json"});
-    const options = {method, headers, redirect: "error", signal: AbortSignal.timeout(25000)};
+    const options = {method, headers, redirect: "manual", signal: AbortSignal.timeout(25000)};
     if (method === "GET" && reference === testReference &&
         new URL(request.url).searchParams.get("diagnostic") === "1") {
         return diagnoseUpstream(upstreamRoute + reference, options);
@@ -86,7 +86,9 @@ export async function onRequest({request, params}) {
 
     try {
         const response = await fetch(upstreamRoute + reference, options);
-        if (!response.headers.get("Content-Type")?.toLowerCase().startsWith("application/json")) {
+        if ((response.status >= 300 && response.status < 400) ||
+            !response.headers.get("Content-Type")?.toLowerCase().startsWith("application/json")) {
+            await response.body?.cancel();
             return reject(502, "تعذر الاتصال بخدمة الدفع.");
         }
         const resultHeaders = new Headers({
