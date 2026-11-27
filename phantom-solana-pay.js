@@ -1,6 +1,7 @@
 (() => {
     const chain = "solana:mainnet";
     const sendFeature = "solana:signAndSendTransaction";
+    const solanaSignature = /^[1-9A-HJ-NP-Za-km-z]{64,88}$/;
     const wallets = new Set();
     const mobile = /Android|iPad|iPhone|iPod/i.test(navigator.userAgent) ||
         (/Mac/i.test(navigator.platform) && navigator.maxTouchPoints > 1);
@@ -57,13 +58,14 @@
         let busy = false;
         let signing = false;
         let broadcastPending = false;
+        let attempt = null;
         let qrUrl = "";
         let timer;
         let revision = 0;
         let plan = getPlan();
 
-        async function request(path, data) {
-            const options = {credentials:"include", cache:"no-store"};
+        async function request(path, data, signal) {
+            const options = {credentials:"include", cache:"no-store", signal};
             if (data !== undefined) {
                 options.method = "POST";
                 options.headers = {"Content-Type":"application/json"};
@@ -76,6 +78,41 @@
                 throw new Error(detail || body.message || "تعذّر الاتصال بخدمة الدفع.");
             }
             return body;
+        }
+
+        function rememberAttempt(id, signature) {
+            attempt = {signature, checks:0, nextCheck:0, checking:false};
+            try {
+                window.sessionStorage.setItem("liketwin-solana-attempt:" + id, signature);
+            } catch (_) {
+                // The current page can still track the transaction.
+            }
+            message.textContent = "استلمنا معرّف المعاملة من Phantom. جارٍ التحقق من وصول الدفعة…";
+        }
+
+        async function verifyAttempt(id) {
+            const current = attempt;
+            if (!current || order?.state === "completed" || current.checking ||
+                current.checks >= 3 || Date.now() < current.nextCheck) return;
+            current.checking = true;
+            current.checks++;
+            try {
+                const result = await request("/orders/" + id + "/verify", {signature:current.signature}, AbortSignal.timeout(8000));
+                if (current !== attempt || order?.state === "completed") return;
+                if (result.completed) {
+                    current.checks = 3;
+                    message.textContent = "تم التحقق من الدفعة. جارٍ تحديث حالة الفاتورة…";
+                } else {
+                    message.textContent = "لم يتأكد وصول الدفعة بعد. يمكنك فتح رابط المعاملة لمتابعتها.";
+                }
+            } catch (_) {
+                if (current === attempt && order?.state !== "completed") {
+                    message.textContent = "تعذّر الاتصال بخدمة التحقق. يمكنك فتح رابط المعاملة لمتابعتها.";
+                }
+            } finally {
+                current.checking = false;
+                current.nextCheck = Date.now() + 8000;
+            }
         }
 
         function render() {
@@ -94,7 +131,7 @@
             el("directOrderNumber").textContent = order.id.slice(0, 12).toUpperCase();
             el("directOrderAmount").textContent = order.amount + " " + order.label.split(" — ")[0];
             const state = el("directInvoiceState");
-            state.textContent = order.state === "waiting" && broadcastPending ? "جارٍ التحقق على الشبكة" : statuses[order.state];
+            state.textContent = order.state === "waiting" && (broadcastPending || attempt) ? "بانتظار تأكيد الدفع" : statuses[order.state];
             state.dataset.state = order.state;
             const expires = el("directExpires");
             expires.hidden = order.state !== "waiting";
@@ -102,11 +139,12 @@
                 hour:"2-digit", minute:"2-digit",
             }).format(new Date(order.expires_at));
             const tx = el("directTxLink");
-            tx.hidden = !order.signature || !explorers[order.network];
-            if (!tx.hidden) tx.href = explorers[order.network] + encodeURIComponent(order.signature);
+            const signature = order.signature || attempt?.signature;
+            tx.hidden = !signature || !explorers[order.network];
+            if (!tx.hidden) tx.href = explorers[order.network] + encodeURIComponent(signature);
 
             const url = order.solana_pay_url;
-            const canPay = order.state === "waiting" && !signing && !broadcastPending && typeof url === "string" &&
+            const canPay = order.state === "waiting" && !signing && !broadcastPending && !attempt && typeof url === "string" &&
                 url.startsWith("solana:") && Date.parse(order.expires_at) > Date.now();
             choices.hidden = !canPay;
             walletButton.hidden = mobile || !canPay || !(phantom() || injectedPhantom());
@@ -173,6 +211,7 @@
             order = null;
             qrUrl = "";
             broadcastPending = false;
+            attempt = null;
             const url = new URL(location.href);
             url.searchParams.delete("direct_order");
             window.history.replaceState(window.history.state, "", url);
@@ -195,6 +234,7 @@
                 // A transient error must not stop monitoring an existing invoice.
             } finally {
                 if (version === revision && order?.state !== "completed") {
+                    void verifyAttempt(id);
                     timer = setTimeout(() => void refresh(id, version), order?.state === "expired" ? 30000 : 8000);
                 }
             }
@@ -221,8 +261,17 @@
             try {
                 const value = await request(path, data);
                 showOrder(value);
-                message.textContent = value.state === "waiting" && !value.solana_pay_url
-                    ? "تتابع هذه الصفحة حالة دفعتك السابقة." : "";
+                let signature;
+                try {
+                    signature = window.sessionStorage.getItem("liketwin-solana-attempt:" + value.id);
+                } catch (_) {}
+                if (value.network === "solana" && value.state !== "completed" && signature && solanaSignature.test(signature)) {
+                    rememberAttempt(value.id, signature);
+                    void verifyAttempt(value.id);
+                } else {
+                    message.textContent = value.state === "waiting" && !value.solana_pay_url
+                        ? "تتابع هذه الصفحة حالة دفعتك السابقة." : "";
+                }
                 if (data) void refreshHistory();
             } catch (error) {
                 message.textContent = error.message;
@@ -234,7 +283,7 @@
         }
 
         async function signWithPhantom() {
-            if (signing || broadcastPending || order?.state !== "waiting" ||
+            if (signing || broadcastPending || attempt || order?.state !== "waiting" ||
                 !order.solana_pay_url || Date.parse(order.expires_at) <= Date.now()) return;
             const id = order.id;
             const standard = phantom();
@@ -287,11 +336,11 @@
                 } else {
                     signature = await sendLegacy(injected, bytes);
                 }
-                if (typeof signature !== "string" || !/^[1-9A-HJ-NP-Za-km-z]{64,88}$/.test(signature)) {
+                if (typeof signature !== "string" || !solanaSignature.test(signature)) {
                     throw new Error("Phantom did not return a transaction signature");
                 }
-                waitForConfirmation("أرسلت Phantom الدفعة. جارٍ انتظار التأكيد على Solana…");
-                void request("/orders/" + id + "/verify", {signature}).catch(() => {});
+                rememberAttempt(id, signature);
+                void verifyAttempt(id);
             } catch (error) {
                 if (error?.code === 4001) {
                     message.textContent = "أُلغيت العملية في Phantom.";
@@ -316,7 +365,7 @@
         start.addEventListener("click", () => void changeOrder("/orders", {plan_id:getPlan(), asset:select.value, invoice_version:3}));
         recheck.addEventListener("click", () => void checkAssets());
         app.addEventListener("click", event => {
-            if (!order || signing || broadcastPending || Date.parse(order.expires_at) <= Date.now()) {
+            if (!order || signing || broadcastPending || attempt || Date.parse(order.expires_at) <= Date.now()) {
                 event.preventDefault();
                 return;
             }
