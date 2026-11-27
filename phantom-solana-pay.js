@@ -286,8 +286,8 @@
             if (signing || broadcastPending || attempt || order?.state !== "waiting" ||
                 !order.solana_pay_url || Date.parse(order.expires_at) <= Date.now()) return;
             const id = order.id;
-            const standard = phantom();
             const injected = injectedPhantom();
+            const standard = injected ? null : phantom();
             if (!standard && !injected) return;
             signing = true;
             let stage = "connect";
@@ -304,19 +304,28 @@
                     render();
                 }, 120000);
             }
+            let connectionTimer;
             try {
-                const {encodeSignature, sendLegacy} = await import("./invoice-solana-send.js");
+                // Ask Phantom to connect while the click is still active.
+                const connection = standard ? standard.features["standard:connect"].connect() : injected.connect();
+                const connected = await Promise.race([connection, new Promise((_, reject) => {
+                    connectionTimer = setTimeout(() => {
+                        reject(new Error("لم تردّ الإضافة. افتح Phantom من شريط المتصفح وافتح قفلها. أغلق أي نافذة طلب قديمة ثم حاول مجددًا."));
+                    }, 45000);
+                })]);
+                clearTimeout(connectionTimer);
                 let account;
                 let address;
                 if (standard) {
-                    const {accounts} = await standard.features["standard:connect"].connect();
-                    account = accounts.find(item => item.chains.includes(chain) && item.features?.includes(sendFeature));
+                    account = connected.accounts.find(item => item.chains.includes(chain) && item.features?.includes(sendFeature));
                     address = account?.address;
                 } else {
-                    const {publicKey} = await injected.connect();
-                    address = publicKey?.toString();
+                    address = connected.publicKey?.toString();
                 }
                 if (!address) throw new Error("اختر حساب Solana في Phantom.");
+                stage = "load";
+                message.textContent = "جارٍ تحميل مكوّن الدفع…";
+                const {encodeSignature, sendLegacy} = await import("./invoice-solana-send.js");
                 if (order?.id !== id || order.state !== "waiting" || Date.parse(order.expires_at) <= Date.now()) return;
 
                 stage = "prepare";
@@ -344,13 +353,18 @@
             } catch (error) {
                 if (error?.code === 4001) {
                     message.textContent = "أُلغيت العملية في Phantom.";
+                } else if (stage === "connect" && error?.code === -32002) {
+                    message.textContent = "هناك طلب مفتوح في Phantom. أغلق نافذته ثم حاول مجددًا.";
                 } else if (stage === "send") {
                     waitForConfirmation("تعذّر معرفة حالة الإرسال. راجع سجل Phantom قبل إعادة الدفع.");
+                } else if (stage === "load") {
+                    message.textContent = "تعذّر تحميل مكوّن الدفع. حدّث الصفحة ثم حاول مجددًا.";
                 } else {
                     const description = stage === "prepare" ? "تعذّر تجهيز المعاملة" : "تعذّر ربط Phantom";
                     message.textContent = description + (error?.message ? " — " + error.message : ".");
                 }
             } finally {
+                clearTimeout(connectionTimer);
                 signing = false;
                 if (order?.state === "completed") message.textContent = "";
                 render();
