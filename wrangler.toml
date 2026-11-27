@@ -1,0 +1,6 @@
+name = "liketwin-web"
+pages_build_output_dir = "./"
+compatibility_date = "2026-11-26"
+
+[env.production]
+compatibility_flags = ["global_fetch_strictly_public"]
